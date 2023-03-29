@@ -6,4 +6,5 @@
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 
-__version__ = "1.25.1-dev-starry"
+
+__version__ = "1.25.1-starry"
