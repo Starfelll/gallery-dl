@@ -24,7 +24,7 @@ class MiyousheExtractor(Extractor):
     root = "https://miyoushe.com"
     directory_fmt = ("{category}", "{user[id]}")
     filename_fmt = "{id}_p{num}.{extension}"
-    archive_fmt = "{id}_{filename}"
+    archive_fmt = "{id}_{num}"
     cookiedomain = ".miyoushe.com"
 
     def __init__(self, match):
