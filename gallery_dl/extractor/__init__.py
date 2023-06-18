@@ -184,6 +184,8 @@ modules = [
     "ytdl",
     "generic",
     "miyoushe",
+    "bilibili",
+    "lofter"
 ]
 
 

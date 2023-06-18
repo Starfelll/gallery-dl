@@ -14,7 +14,7 @@ from ..cache import cache
 import itertools
 import re
 
-BASE_PATTERN = r"(?:https?://)?(?:www\.|beta\.)?(kemono|coomer)\.party"
+BASE_PATTERN = r"(?:https?://)?(?:www\.|beta\.)?(kemono|coomer)\.(party|su)"
 USER_PATTERN = BASE_PATTERN + r"/([^/?#]+)/user/([^/?#]+)"
 HASH_PATTERN = r"/[0-9a-f]{2}/[0-9a-f]{2}/([0-9a-f]{64})"
 
@@ -32,6 +32,8 @@ class KemonopartyExtractor(Extractor):
         if match.group(1) == "coomer":
             self.category = "coomerparty"
             self.cookiedomain = ".coomer.party"
+        if match.group(2) == "su":
+            self.root = "https://kemono.su"
         self.root = text.root_from_url(match.group(0))
         Extractor.__init__(self, match)
         self.session.headers["Referer"] = self.root + "/"
@@ -226,7 +228,7 @@ class KemonopartyUserExtractor(KemonopartyExtractor):
     )
 
     def __init__(self, match):
-        _, service, user_id, offset = match.groups()
+        _, _, service, user_id, offset = match.groups()
         self.subcategory = service
         KemonopartyExtractor.__init__(self, match)
         self.api_url = "{}/api/{}/user/{}".format(self.root, service, user_id)
@@ -333,7 +335,7 @@ class KemonopartyPostExtractor(KemonopartyExtractor):
     )
 
     def __init__(self, match):
-        _, service, user_id, post_id = match.groups()
+        _, _, service, user_id, post_id = match.groups()
         self.subcategory = service
         KemonopartyExtractor.__init__(self, match)
         self.api_url = "{}/api/{}/user/{}/post/{}".format(
