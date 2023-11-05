@@ -14,6 +14,11 @@ import collections
 import util
 from gallery_dl import extractor
 
+try:
+    from test import results
+except ImportError:
+    results = None
+
 
 CATEGORY_MAP = {
     "2chan"          : "Futaba Channel",
@@ -28,14 +33,15 @@ CATEGORY_MAP = {
     "b4k"            : "arch.b4k.co",
     "baraag"         : "baraag",
     "bbc"            : "BBC",
-    "bcy"            : "半次元",
     "comicvine"      : "Comic Vine",
     "coomerparty"    : "Coomer",
+    "deltaporno"     : "DeltaPorno",
     "deviantart"     : "DeviantArt",
     "drawfriends"    : "Draw Friends",
     "dynastyscans"   : "Dynasty Reader",
     "e621"           : "e621",
     "e926"           : "e926",
+    "e6ai"           : "e6AI",
     "erome"          : "EroMe",
     "e-hentai"       : "E-Hentai",
     "exhentai"       : "ExHentai",
@@ -60,12 +66,14 @@ CATEGORY_MAP = {
     "imgbb"          : "ImgBB",
     "imgbox"         : "imgbox",
     "imagechest"     : "ImageChest",
+    "imgkiwi"        : "IMG.Kiwi",
     "imgth"          : "imgth",
     "imgur"          : "imgur",
     "joyreactor"     : "JoyReactor",
+    "itchio"         : "itch.io",
+    "jpgfish"        : "JPG Fish",
     "kabeuchi"       : "かべうち",
     "kemonoparty"    : "Kemono",
-    "lineblog"       : "LINE BLOG",
     "livedoor"       : "livedoor Blog",
     "ohpolly"        : "Oh Polly",
     "omgmiamiswimwear": "Omg Miami Swimwear",
@@ -76,9 +84,9 @@ CATEGORY_MAP = {
     "mangalife"      : "MangaLife",
     "manganelo"      : "Manganato",
     "mangapark"      : "MangaPark",
+    "mangaread"      : "MangaRead",
     "mangasee"       : "MangaSee",
     "mastodon.social": "mastodon.social",
-    "mememuseum"     : "meme.museum",
     "myhentaigallery": "My Hentai Gallery",
     "myportfolio"    : "Adobe Portfolio",
     "naverwebtoon"   : "NaverWebtoon",
@@ -112,13 +120,13 @@ CATEGORY_MAP = {
     "subscribestar"  : "SubscribeStar",
     "tbib"           : "The Big ImageBoard",
     "tcbscans"       : "TCB Scans",
+    "tco"            : "Twitter t.co",
     "thatpervert"    : "ThatPervert",
     "thebarchive"    : "The /b/ Archive",
     "thecollection"  : "The /co/llection",
-    "tokyochronos"   : "TokyoChronos",
     "tumblrgallery"  : "TumblrGallery",
     "vanillarock"    : "もえぴりあ",
-    "vidyart"        : "/v/idyart",
+    "vidyart2"       : "/v/idyart2",
     "vk"             : "VK",
     "vsco"           : "VSCO",
     "wallpapercave"  : "Wallpaper Cave",
@@ -132,6 +140,7 @@ CATEGORY_MAP = {
 }
 
 SUBCATEGORY_MAP = {
+    ""       : "",
     "art"    : "Art",
     "audio"  : "Audio",
     "doujin" : "Doujin",
@@ -149,7 +158,7 @@ SUBCATEGORY_MAP = {
     "tweets" : "",
     "user"   : "User Profiles",
     "watch"  : "Watches",
-    "following"    : "",
+    "following"    : "Followed Users",
     "related-pin"  : "related Pins",
     "related-board": "",
 
@@ -175,11 +184,11 @@ SUBCATEGORY_MAP = {
     "fapello": {
         "path": "Videos, Trending Posts, Popular Videos, Top Models",
     },
-    "gfycat": {
-        "collections": "",
-    },
     "hentaifoundry": {
         "story": "",
+    },
+    "imgur": {
+        "favorite-folder": "Favorites Folders",
     },
     "instagram": {
         "posts": "",
@@ -189,6 +198,9 @@ SUBCATEGORY_MAP = {
     "kemonoparty": {
         "discord": "Discord Servers",
         "discord-server": "",
+    },
+    "lensdump": {
+        "albums": "",
     },
     "mangadex": {
         "feed" : "Followed Feed",
@@ -208,9 +220,15 @@ SUBCATEGORY_MAP = {
     },
     "pixiv": {
         "me"  : "pixiv.me Links",
+        "novel-bookmark": "Novel Bookmarks",
+        "novel-series": "Novel Series",
+        "novel-user": "",
         "pixivision": "pixivision",
         "sketch": "Sketch",
         "work": "individual Images",
+    },
+    "pornhub": {
+        "gifs": "",
     },
     "reddit": {
         "home": "Home Feed",
@@ -226,6 +244,9 @@ SUBCATEGORY_MAP = {
     },
     "smugmug": {
         "path": "Images from Users and Folders",
+    },
+    "tumblr": {
+        "day": "Days",
     },
     "twitter": {
         "media": "Media Timelines",
@@ -262,10 +283,12 @@ BASE_MAP = {
     "foolslide"   : "FoOlSlide Instances",
     "gelbooru_v01": "Gelbooru Beta 0.1.11",
     "gelbooru_v02": "Gelbooru Beta 0.2",
+    "jschan"      : "jschan Imageboards",
     "lolisafe"    : "lolisafe and chibisafe",
     "lynxchan"    : "LynxChan Imageboards",
     "moebooru"    : "Moebooru and MyImouto",
     "szurubooru"  : "szurubooru Instances",
+    "urlshortener": "URL Shorteners",
     "vichan"      : "vichan Imageboards",
 }
 
@@ -322,8 +345,10 @@ AUTH_MAP = {
     "tsumino"        : "Supported",
     "tumblr"         : _OAUTH,
     "twitter"        : "Supported",
+    "vipergirls"     : "Supported",
     "wallhaven"      : _APIKEY_WH,
     "weasyl"         : _APIKEY_WY,
+    "zerochan"       : "Supported",
 }
 
 IGNORE_LIST = (
@@ -348,17 +373,8 @@ def domain(cls):
     if hasattr(cls, "root") and cls.root:
         return cls.root + "/"
 
-    if hasattr(cls, "https"):
-        scheme = "https" if cls.https else "http"
-        netloc = cls.__doc__.split()[-1]
-        return "{}://{}/".format(scheme, netloc)
-
-    test = next(cls._get_tests(), None)
-    if test:
-        url = test[0]
-        return url[:url.find("/", 8)+1]
-
-    return ""
+    url = cls.example
+    return url[:url.find("/", 8)+1]
 
 
 def category_text(c):
@@ -413,14 +429,10 @@ def build_extractor_list():
             for category, root in extr.instances:
                 base[category].append(extr.subcategory)
                 if category not in domains:
-                    if not root:
+                    if not root and results:
                         # use domain from first matching test
-                        for url, _ in extr._get_tests():
-                            if extr.from_url(url).category == category:
-                                root = url[:url.index("/", 8)]
-                                break
-                        else:
-                            continue
+                        test = results.category(category)[0]
+                        root = test["#class"].from_url(test["#url"]).root
                     domains[category] = root + "/"
 
     # sort subcategory lists

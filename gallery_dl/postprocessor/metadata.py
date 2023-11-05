@@ -124,10 +124,8 @@ class MetadataPP(PostProcessor):
         for key, func in self.fields.items():
             obj = kwdict
             try:
-                while "[" in key:
-                    name, _, key = key.partition("[")
-                    obj = obj[name]
-                    key = key.rstrip("]")
+                if "[" in key:
+                    obj, key = _traverse(obj, key)
                 obj[key] = func(kwdict)
             except Exception:
                 pass
@@ -137,10 +135,8 @@ class MetadataPP(PostProcessor):
         for key in self.fields:
             obj = kwdict
             try:
-                while "[" in key:
-                    name, _, key = key.partition("[")
-                    obj = obj[name]
-                    key = key.rstrip("]")
+                if "[" in key:
+                    obj, key = _traverse(obj, key)
                 del obj[key]
             except Exception:
                 pass
@@ -193,7 +189,7 @@ class MetadataPP(PostProcessor):
             tags = []
             extend = tags.extend
             for tagdict in taglists:
-                extend([x for x in tagdict.values() if x is not None])
+                extend([x for x in tagdict.values() if isinstance(x, str)])
             tags.sort()
 
         fp.write("\n".join(tags) + "\n")
@@ -210,8 +206,20 @@ class MetadataPP(PostProcessor):
             sort_keys=options.get("sort", False),
             separators=options.get("separators"),
             indent=options.get("indent", indent),
-            check_circular=False, default=str,
+            check_circular=False,
+            default=util.json_default,
         )
+
+
+def _traverse(obj, key):
+    name, _, key = key.partition("[")
+    obj = obj[name]
+
+    while "[" in key:
+        name, _, key = key.partition("[")
+        obj = obj[name.strip("\"']")]
+
+    return obj, key.strip("\"']")
 
 
 __postprocessor__ = MetadataPP

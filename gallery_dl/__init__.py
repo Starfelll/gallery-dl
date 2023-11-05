@@ -44,13 +44,13 @@ def main():
             config.load(args.configs_json, strict=True)
         if args.configs_yaml:
             import yaml
-            config.load(args.configs_yaml, strict=True, load=yaml.safe_load)
+            config.load(args.configs_yaml, strict=True, loads=yaml.safe_load)
         if args.configs_toml:
             try:
                 import tomllib as toml
             except ImportError:
                 import toml
-            config.load(args.configs_toml, strict=True, load=toml.loads)
+            config.load(args.configs_toml, strict=True, loads=toml.loads)
         if args.filename:
             filename = args.filename
             if filename == "/O":
@@ -70,12 +70,14 @@ def main():
         if args.cookies_from_browser:
             browser, _, profile = args.cookies_from_browser.partition(":")
             browser, _, keyring = browser.partition("+")
+            browser, _, domain = browser.partition("/")
             if profile.startswith(":"):
                 container = profile[1:]
                 profile = None
             else:
                 profile, _, container = profile.partition("::")
-            config.set((), "cookies", (browser, profile, keyring, container))
+            config.set((), "cookies", (
+                browser, profile, keyring, container, domain))
         if args.options_pp:
             config.set((), "postprocessor-options", args.options_pp)
         for opts in args.options:
@@ -194,16 +196,15 @@ def main():
 
         elif args.list_extractors:
             write = sys.stdout.write
-            fmt = "{}\n{}\nCategory: {} - Subcategory: {}{}\n\n".format
+            fmt = ("{}{}\nCategory: {} - Subcategory: {}"
+                   "\nExample : {}\n\n").format
 
             for extr in extractor.extractors():
-                if not extr.__doc__:
-                    continue
-                test = next(extr._get_tests(), None)
                 write(fmt(
-                    extr.__name__, extr.__doc__,
+                    extr.__name__,
+                    "\n" + extr.__doc__ if extr.__doc__ else "",
                     extr.category, extr.subcategory,
-                    "\nExample : " + test[0] if test else "",
+                    extr.example,
                 ))
 
         elif args.clear_cache:
@@ -295,7 +296,7 @@ def main():
             return retval
 
     except KeyboardInterrupt:
-        sys.exit("\nKeyboardInterrupt")
+        raise SystemExit("\nKeyboardInterrupt")
     except BrokenPipeError:
         pass
     except OSError as exc:

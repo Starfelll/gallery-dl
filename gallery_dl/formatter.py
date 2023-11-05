@@ -9,6 +9,7 @@
 """String formatters"""
 
 import os
+import sys
 import time
 import string
 import _string
@@ -181,9 +182,10 @@ class StringFormatter():
                     if obj:
                         break
                 except Exception:
-                    pass
+                    obj = None
             else:
-                obj = self.default
+                if obj is None:
+                    obj = self.default
             return fmt(obj)
         return wrap
 
@@ -210,7 +212,7 @@ class ModuleFormatter():
     """Generate text by calling an external function"""
 
     def __init__(self, function_spec, default=NONE, fmt=None):
-        module_name, _, function_name = function_spec.partition(":")
+        module_name, _, function_name = function_spec.rpartition(":")
         module = util.import_file(module_name)
         self.format_map = getattr(module, function_name)
 
@@ -234,10 +236,10 @@ class TemplateFormatter(StringFormatter):
 class TemplateFStringFormatter(FStringFormatter):
     """Read f-string from file"""
 
-    def __init__(self, path, default=NONE, fmt=format):
+    def __init__(self, path, default=NONE, fmt=None):
         with open(util.expand_path(path)) as fp:
-            format_string = fp.read()
-        FStringFormatter.__init__(self, format_string, default, fmt)
+            fstring = fp.read()
+        FStringFormatter.__init__(self, fstring, default, fmt)
 
 
 def parse_field_name(field_name):
@@ -255,7 +257,11 @@ def parse_field_name(field_name):
             func = operator.itemgetter
             try:
                 if ":" in key:
-                    key = _slice(key)
+                    if key[0] == "b":
+                        func = _bytesgetter
+                        key = _slice(key[1:])
+                    else:
+                        key = _slice(key)
                 else:
                     key = key.strip("\"'")
             except TypeError:
@@ -274,6 +280,14 @@ def _slice(indices):
         int(stop) if stop else None,
         int(step) if step else None,
     )
+
+
+def _bytesgetter(slice, encoding=sys.getfilesystemencoding()):
+
+    def apply_slice_bytes(obj):
+        return obj.encode(encoding)[slice].decode(encoding, "ignore")
+
+    return apply_slice_bytes
 
 
 def _build_format_func(format_spec, default):
@@ -295,11 +309,20 @@ def _parse_optional(format_spec, default):
 
 def _parse_slice(format_spec, default):
     indices, _, format_spec = format_spec.partition("]")
-    slice = _slice(indices[1:])
     fmt = _build_format_func(format_spec, default)
 
-    def apply_slice(obj):
-        return fmt(obj[slice])
+    if indices[1] == "b":
+        slice_bytes = _bytesgetter(_slice(indices[2:]))
+
+        def apply_slice(obj):
+            return fmt(slice_bytes(obj))
+
+    else:
+        slice = _slice(indices[1:])
+
+        def apply_slice(obj):
+            return fmt(obj[slice])
+
     return apply_slice
 
 
@@ -415,6 +438,7 @@ _CONVERSIONS = {
     "T": util.datetime_to_timestamp_string,
     "d": text.parse_timestamp,
     "U": text.unescape,
+    "H": lambda s: text.unescape(text.remove_html(s)),
     "g": text.slugify,
     "S": util.to_string,
     "s": str,

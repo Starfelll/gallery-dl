@@ -18,12 +18,6 @@
     --user-agent UA             User-Agent request header
     --clear-cache MODULE        Delete cached login sessions, cookies, etc. for
                                 MODULE (ALL to delete everything)
-    --cookies FILE              File to load additional cookies from
-    --cookies-from-browser BROWSER[+KEYRING][:PROFILE][::CONTAINER]
-                                Name of the browser to load cookies from, with
-                                optional keyring name prefixed with '+', profile
-                                prefixed with ':', and container prefixed with
-                                '::' ('none' for no container)
 
 ## Output Options:
     -q, --quiet                 Activate quiet mode
@@ -84,6 +78,16 @@
     -p, --password PASS         Password belonging to the given username
     --netrc                     Enable .netrc authentication data
 
+## Cookie Options:
+    -C, --cookies FILE          File to load additional cookies from
+    --cookies-export FILE       Export session cookies to FILE
+    --cookies-from-browser BROWSER[/DOMAIN][+KEYRING][:PROFILE][::CONTAINER]
+                                Name of the browser to load cookies from, with
+                                optional domain prefixed with '/', keyring name
+                                prefixed with '+', profile prefixed with ':',
+                                and container prefixed with '::' ('none' for no
+                                container)
+
 ## Selection Options:
     --download-archive FILE     Record all downloaded or skipped files in FILE
                                 and skip downloading any file already in it
@@ -117,11 +121,13 @@
     --write-tags                Write image tags to separate text files
     --mtime-from-date           Set file modification times according to 'date'
                                 metadata
-    --exec CMD                  Execute CMD for each downloaded file. Example:
-                                --exec "convert {} {}.png && rm {}"
+    --exec CMD                  Execute CMD for each downloaded file. Supported
+                                replacement fields are {} or {_path},
+                                {_directory}, {_filename}. Example: --exec
+                                "convert {} {}.png && rm {}"
     --exec-after CMD            Execute CMD after all files were downloaded
-                                successfully. Example: --exec-after "cd {} &&
-                                convert * ../doc.pdf"
+                                successfully. Example: --exec-after "cd
+                                {_directory} && convert * ../doc.pdf"
     -P, --postprocessor NAME    Activate the specified post processor
     -O, --postprocessor-option OPT
                                 Additional '<key>=<value>' post processor

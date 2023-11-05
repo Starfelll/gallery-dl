@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018-2021 Mike Fährmann
+# Copyright 2018-2023 Mike Fährmann
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
@@ -19,9 +19,10 @@ import re
 class IdolcomplexExtractor(SankakuExtractor):
     """Base class for idolcomplex extractors"""
     category = "idolcomplex"
-    cookienames = ("login", "pass_hash")
-    cookiedomain = "idol.sankakucomplex.com"
-    root = "https://" + cookiedomain
+    cookies_domain = "idol.sankakucomplex.com"
+    cookies_names = ("login", "pass_hash")
+    root = "https://" + cookies_domain
+    referer = False
     request_interval = 5.0
 
     def __init__(self, match):
@@ -29,6 +30,8 @@ class IdolcomplexExtractor(SankakuExtractor):
         self.logged_in = True
         self.start_page = 1
         self.start_post = 0
+
+    def _init(self):
         self.extags = self.config("tags", False)
 
     def items(self):
@@ -51,14 +54,14 @@ class IdolcomplexExtractor(SankakuExtractor):
         """Return an iterable containing all relevant post ids"""
 
     def login(self):
-        if self._check_cookies(self.cookienames):
+        if self.cookies_check(self.cookies_names):
             return
+
         username, password = self._get_auth_info()
         if username:
-            cookies = self._login_impl(username, password)
-            self._update_cookies(cookies)
-        else:
-            self.logged_in = False
+            return self.cookies_update(self._login_impl(username, password))
+
+        self.logged_in = False
 
     @cache(maxage=90*24*3600, keyarg=1)
     def _login_impl(self, username, password):
@@ -76,7 +79,7 @@ class IdolcomplexExtractor(SankakuExtractor):
         if not response.history or response.url != self.root + "/user/home":
             raise exception.AuthenticationError()
         cookies = response.history[0].cookies
-        return {c: cookies[c] for c in self.cookienames}
+        return {c: cookies[c] for c in self.cookies_names}
 
     def _parse_post(self, post_id):
         """Extract metadata of a single post"""
@@ -131,20 +134,7 @@ class IdolcomplexTagExtractor(IdolcomplexExtractor):
     directory_fmt = ("{category}", "{search_tags}")
     archive_fmt = "t_{search_tags}_{id}"
     pattern = r"(?:https?://)?idol\.sankakucomplex\.com/\?([^#]*)"
-    test = (
-        ("https://idol.sankakucomplex.com/?tags=lyumos", {
-            "count": 5,
-            "range": "18-22",
-            "pattern": r"https://is\.sankakucomplex\.com/data/[^/]{2}/[^/]{2}"
-                       r"/[^/]{32}\.\w+\?e=\d+&m=[^&#]+",
-        }),
-        ("https://idol.sankakucomplex.com/?tags=order:favcount", {
-            "count": 5,
-            "range": "18-22",
-        }),
-        ("https://idol.sankakucomplex.com"
-         "/?tags=lyumos+wreath&page=3&next=694215"),
-    )
+    example = "https://idol.sankakucomplex.com/?tags=TAGS"
     per_page = 20
 
     def __init__(self, match):
@@ -212,9 +202,7 @@ class IdolcomplexPoolExtractor(IdolcomplexExtractor):
     directory_fmt = ("{category}", "pool", "{pool}")
     archive_fmt = "p_{pool}_{id}"
     pattern = r"(?:https?://)?idol\.sankakucomplex\.com/pool/show/(\d+)"
-    test = ("https://idol.sankakucomplex.com/pool/show/145", {
-        "count": 3,
-    })
+    example = "https://idol.sankakucomplex.com/pool/show/12345"
     per_page = 24
 
     def __init__(self, match):
@@ -249,17 +237,7 @@ class IdolcomplexPostExtractor(IdolcomplexExtractor):
     subcategory = "post"
     archive_fmt = "{id}"
     pattern = r"(?:https?://)?idol\.sankakucomplex\.com/post/show/(\d+)"
-    test = ("https://idol.sankakucomplex.com/post/show/694215", {
-        "content": "694ec2491240787d75bf5d0c75d0082b53a85afd",
-        "options": (("tags", True),),
-        "keyword": {
-            "tags_character": "shani_(the_witcher)",
-            "tags_copyright": "the_witcher",
-            "tags_idol": str,
-            "tags_medium": str,
-            "tags_general": str,
-        },
-    })
+    example = "https://idol.sankakucomplex.com/post/show/12345"
 
     def __init__(self, match):
         IdolcomplexExtractor.__init__(self, match)

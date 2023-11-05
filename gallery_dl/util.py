@@ -223,8 +223,14 @@ def datetime_to_timestamp_string(dt):
         return ""
 
 
+def json_default(obj):
+    if isinstance(obj, CustomNone):
+        return None
+    return str(obj)
+
+
 json_loads = json._default_decoder.decode
-json_dumps = json.JSONEncoder(default=str).encode
+json_dumps = json.JSONEncoder(default=json_default).encode
 
 
 def dump_json(obj, fp=sys.stdout, ensure_ascii=True, indent=4):
@@ -233,14 +239,13 @@ def dump_json(obj, fp=sys.stdout, ensure_ascii=True, indent=4):
         obj, fp,
         ensure_ascii=ensure_ascii,
         indent=indent,
-        default=str,
+        default=json_default,
         sort_keys=True,
     )
     fp.write("\n")
 
 
-def dump_response(response, fp, *,
-                  headers=False, content=True, hide_auth=True):
+def dump_response(response, fp, headers=False, content=True, hide_auth=True):
     """Write the contents of 'response' into a file-like object"""
 
     if headers:
