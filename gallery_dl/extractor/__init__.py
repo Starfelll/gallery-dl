@@ -196,6 +196,9 @@ modules = [
     "test",
     "ytdl",
     "generic",
+    "miyoushe",
+    "bilibili",
+    "lofter"
 ]
 
 

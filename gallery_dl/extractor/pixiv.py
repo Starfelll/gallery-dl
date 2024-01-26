@@ -335,6 +335,11 @@ class PixivFavoriteExtractor(PixivExtractor):
         self.query = query
         self.user_id = uid
 
+        if query.get("rest") == "hide":
+            self.restrict = "private"
+        else:
+            self.restrict = "public"
+
     def works(self):
         tag = None
         if "tag" in self.query:
@@ -342,11 +347,7 @@ class PixivFavoriteExtractor(PixivExtractor):
         elif self.tag:
             tag = text.unquote(self.tag)
 
-        restrict = "public"
-        if self.query.get("rest") == "hide":
-            restrict = "private"
-
-        return self.api.user_bookmarks_illust(self.user_id, tag, restrict)
+        return self.api.user_bookmarks_illust(self.user_id, tag, self.restrict)
 
     def metadata(self):
         if self.user_id:
@@ -356,7 +357,7 @@ class PixivFavoriteExtractor(PixivExtractor):
             user = self.api.user
 
         self.user_id = user["id"]
-        return {"user_bookmark": user}
+        return {"user_bookmark": user, "restrict_bookmark": self.restrict}
 
     def _items_following(self):
         restrict = "public"
