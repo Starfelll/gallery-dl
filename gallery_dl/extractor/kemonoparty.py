@@ -9,9 +9,10 @@
 """Extractors for https://kemono.party/"""
 
 from .common import Extractor, Message
-from .. import text, exception
+from .. import text, util, exception
 from ..cache import cache, memcache
 import itertools
+import json
 import re
 
 BASE_PATTERN = r"(?:https?://)?(?:www\.|beta\.)?(kemono|coomer)\.(party|su)"
@@ -37,10 +38,16 @@ class KemonopartyExtractor(Extractor):
         Extractor.__init__(self, match)
 
     def _init(self):
+        self.revisions = self.config("revisions")
+        if self.revisions:
+            self.revisions_unique = (self.revisions == "unique")
         self._prepare_ddosguard_cookies()
         self._find_inline = re.compile(
             r'src="(?:https?://(?:kemono|coomer)\.(?:party|su))?(/inline/[^"]+'
             r'|/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}\.[^"]+)').findall
+        self._json_dumps = json.JSONEncoder(
+            ensure_ascii=False, check_circular=False,
+            sort_keys=True, separators=(",", ":")).encode
 
     def items(self):
         find_hash = re.compile(HASH_PATTERN).match
@@ -129,7 +136,7 @@ class KemonopartyExtractor(Extractor):
             self.cookies_update(self._login_impl(
                 (username, self.cookies_domain), password))
 
-    @cache(maxage=28*24*3600, keyarg=1)
+    @cache(maxage=28*86400, keyarg=1)
     def _login_impl(self, username, password):
         username = username[0]
         self.log.info("Logging in as %s", username)
@@ -217,9 +224,28 @@ class KemonopartyExtractor(Extractor):
             self.root, server)
         return self.request(url).json()
 
-    @memcache(keyarg=1)
-    def _post_revisions(self, url):
-        revs = self.request(url + "/revisions").json()
+    def _revisions_post(self, post, url):
+        post["revision_id"] = 0
+
+        try:
+            revs = self.request(url + "/revisions").json()
+        except exception.HttpError:
+            post["revision_hash"] = self._revision_hash(post)
+            post["revision_index"] = 1
+            return (post,)
+        revs.insert(0, post)
+
+        for rev in revs:
+            rev["revision_hash"] = self._revision_hash(rev)
+
+        if self.revisions_unique:
+            uniq = []
+            last = None
+            for rev in revs:
+                if last != rev["revision_hash"]:
+                    last = rev["revision_hash"]
+                    uniq.append(rev)
+            revs = uniq
 
         idx = len(revs)
         for rev in revs:
@@ -227,6 +253,30 @@ class KemonopartyExtractor(Extractor):
             idx -= 1
 
         return revs
+
+    def _revisions_all(self, url):
+        revs = self.request(url + "/revisions").json()
+
+        idx = len(revs)
+        for rev in revs:
+            rev["revision_hash"] = self._revision_hash(rev)
+            rev["revision_index"] = idx
+            idx -= 1
+
+        return revs
+
+    def _revision_hash(self, revision):
+        rev = revision.copy()
+        rev.pop("revision_id", None)
+        rev.pop("added", None)
+        rev.pop("next", None)
+        rev.pop("prev", None)
+        rev["file"] = rev["file"].copy()
+        rev["file"].pop("name", None)
+        rev["attachments"] = [a.copy() for a in rev["attachments"]]
+        for a in rev["attachments"]:
+            a.pop("name", None)
+        return util.sha1(self._json_dumps(rev))
 
 
 def _validate(response):
@@ -252,24 +302,14 @@ class KemonopartyUserExtractor(KemonopartyExtractor):
         url = self.api_url
         params = text.parse_query(self.query)
         params["o"] = text.parse_int(params.get("o"))
-        revisions = self.config("revisions")
 
         while True:
             posts = self.request(url, params=params).json()
 
-            if revisions:
+            if self.revisions:
                 for post in posts:
-                    post["revision_id"] = 0
                     post_url = "{}/post/{}".format(self.api_url, post["id"])
-                    try:
-                        revs = self._post_revisions(post_url)
-                    except exception.HttpError:
-                        post["revision_index"] = 1
-                        yield post
-                    else:
-                        post["revision_index"] = len(revs) + 1
-                        yield post
-                        yield from revs
+                    yield from self._revisions_post(post, post_url)
             else:
                 yield from posts
 
@@ -296,18 +336,11 @@ class KemonopartyPostExtractor(KemonopartyExtractor):
     def posts(self):
         if not self.revision:
             post = self.request(self.api_url).json()
-            if self.config("revisions"):
-                post["revision_id"] = 0
-                try:
-                    revs = self._post_revisions(self.api_url)
-                except exception.HttpError:
-                    post["revision_index"] = 1
-                else:
-                    post["revision_index"] = len(revs) + 1
-                    return itertools.chain((post,), revs)
+            if self.revisions:
+                return self._revisions_post(post, self.api_url)
             return (post,)
 
-        revs = self._post_revisions(self.api_url)
+        revs = self._revisions_all(self.api_url)
         if not self.revision_id:
             return revs
 

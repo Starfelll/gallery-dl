@@ -52,19 +52,29 @@ class PatreonExtractor(Extractor):
                     post["hash"] = fhash
                     post["type"] = kind
                     post["num"] += 1
-                    yield Message.Url, url, text.nameext_from_url(name, post)
+                    text.nameext_from_url(name, post)
+                    if text.ext_from_url(url) == "m3u8":
+                        url = "ytdl:" + url
+                        post["extension"] = "mp4"
+                    yield Message.Url, url, post
                 else:
                     self.log.debug("skipping %s (%s %s)", url, fhash, kind)
 
-    @staticmethod
-    def _postfile(post):
+    def _postfile(self, post):
         postfile = post.get("post_file")
         if postfile:
-            return (("postfile", postfile["url"], postfile["name"]),)
+            url = postfile["url"]
+            name = postfile.get("name")
+            if not name:
+                if url.startswith("https://stream.mux.com/"):
+                    name = url
+                else:
+                    name = self._filename(url) or url
+            return (("postfile", url, name),)
         return ()
 
     def _images(self, post):
-        for image in post["images"]:
+        for image in post.get("images") or ():
             url = image.get("download_url")
             if url:
                 name = image.get("file_name") or self._filename(url) or url
@@ -80,7 +90,7 @@ class PatreonExtractor(Extractor):
         return ()
 
     def _attachments(self, post):
-        for attachment in post["attachments"]:
+        for attachment in post.get("attachments") or ():
             url = self.request(
                 attachment["url"], method="HEAD",
                 allow_redirects=False, fatal=False,
@@ -249,8 +259,24 @@ class PatreonExtractor(Extractor):
         return [genmap[ft] for ft in filetypes]
 
     def _extract_bootstrap(self, page):
+        data = text.extr(
+            page, 'id="__NEXT_DATA__" type="application/json">', '</script')
+        if data:
+            try:
+                return (util.json_loads(data)["props"]["pageProps"]
+                        ["bootstrapEnvelope"]["bootstrap"])
+            except Exception as exc:
+                self.log.debug("%s: %s", exc.__class__.__name__, exc)
+
         bootstrap = text.extr(
             page, 'window.patreon = {"bootstrap":', '},"apiServer"')
+        if bootstrap:
+            return util.json_loads(bootstrap + "}")
+
+        bootstrap = text.extr(
+            page,
+            'window.patreon = wrapInProxy({"bootstrap":',
+            '},"apiServer"')
         if bootstrap:
             return util.json_loads(bootstrap + "}")
 

@@ -32,6 +32,7 @@ CATEGORY_MAP = {
     "atfbooru"       : "ATFBooru",
     "b4k"            : "arch.b4k.co",
     "baraag"         : "baraag",
+    "batoto"         : "BATO.TO",
     "bbc"            : "BBC",
     "comicvine"      : "Comic Vine",
     "coomerparty"    : "Coomer",
@@ -49,6 +50,7 @@ CATEGORY_MAP = {
     "fanbox"         : "pixivFANBOX",
     "fashionnova"    : "Fashion Nova",
     "furaffinity"    : "Fur Affinity",
+    "hatenablog"     : "HatenaBlog",
     "hbrowse"        : "HBrowse",
     "hentai2read"    : "Hentai2Read",
     "hentaicosplays" : "Hentai Cosplay",
@@ -86,7 +88,10 @@ CATEGORY_MAP = {
     "mangapark"      : "MangaPark",
     "mangaread"      : "MangaRead",
     "mangasee"       : "MangaSee",
+    "mariowiki"      : "Super Mario Wiki",
     "mastodon.social": "mastodon.social",
+    "mediawiki"      : "MediaWiki",
+    "micmicidol"     : "MIC MIC IDOL",
     "myhentaigallery": "My Hentai Gallery",
     "myportfolio"    : "Adobe Portfolio",
     "naverwebtoon"   : "NaverWebtoon",
@@ -96,15 +101,16 @@ CATEGORY_MAP = {
     "nsfwalbum"      : "NSFWalbum.com",
     "paheal"         : "rule #34",
     "photovogue"     : "PhotoVogue",
+    "pixeldrain"     : "pixeldrain",
     "pornimagesxxx"  : "Porn Image",
     "pornpics"       : "PornPics.com",
     "pornreactor"    : "PornReactor",
-    "powermanga"     : "PowerManga",
     "readcomiconline": "Read Comic Online",
     "rbt"            : "RebeccaBlackTech",
     "redgifs"        : "RedGIFs",
     "rozenarcana"    : "Rozen Arcana",
     "rule34"         : "Rule 34",
+    "rule34hentai"   : "Rule34Hentai",
     "rule34us"       : "Rule 34",
     "sankaku"        : "Sankaku Channel",
     "sankakucomplex" : "Sankaku Complex",
@@ -117,10 +123,12 @@ CATEGORY_MAP = {
     "slideshare"     : "SlideShare",
     "smugmug"        : "SmugMug",
     "speakerdeck"    : "Speaker Deck",
+    "steamgriddb"    : "SteamGridDB",
     "subscribestar"  : "SubscribeStar",
     "tbib"           : "The Big ImageBoard",
     "tcbscans"       : "TCB Scans",
     "tco"            : "Twitter t.co",
+    "tmohentai"      : "TMOHentai",
     "thatpervert"    : "ThatPervert",
     "thebarchive"    : "The /b/ Archive",
     "thecollection"  : "The /co/llection",
@@ -133,6 +141,7 @@ CATEGORY_MAP = {
     "webmshare"      : "webmshare",
     "webtoons"       : "Webtoon",
     "wikiart"        : "WikiArt.org",
+    "wikimediacommons": "Wikimedia Commons",
     "xbunkr"         : "xBunkr",
     "xhamster"       : "xHamster",
     "xvideos"        : "XVideos",
@@ -184,11 +193,19 @@ SUBCATEGORY_MAP = {
     "fapello": {
         "path": "Videos, Trending Posts, Popular Videos, Top Models",
     },
+    "hatenablog": {
+        "archive": "Archive",
+        "entry"  : "Individual Posts",
+        "home"   : "Home Feed",
+    },
     "hentaifoundry": {
         "story": "",
     },
     "imgur": {
         "favorite-folder": "Favorites Folders",
+    },
+    "inkbunny": {
+        "unread": "Unread Submissions",
     },
     "instagram": {
         "posts": "",
@@ -227,8 +244,17 @@ SUBCATEGORY_MAP = {
         "sketch": "Sketch",
         "work": "individual Images",
     },
+    "poringa": {
+        "post": "Posts Images",
+    },
     "pornhub": {
         "gifs": "",
+    },
+    "raddle": {
+        "home"           : "Home Feed",
+        "usersubmissions": "User Profiles",
+        "post"           : "Individual Posts",
+        "shorturl"       : "",
     },
     "reddit": {
         "home": "Home Feed",
@@ -244,6 +270,9 @@ SUBCATEGORY_MAP = {
     },
     "smugmug": {
         "path": "Images from Users and Folders",
+    },
+    "steamgriddb": {
+        "asset": "Individual Assets",
     },
     "tumblr": {
         "day": "Days",
@@ -290,6 +319,10 @@ BASE_MAP = {
     "szurubooru"  : "szurubooru Instances",
     "urlshortener": "URL Shorteners",
     "vichan"      : "vichan Imageboards",
+}
+
+URL_MAP = {
+    "blogspot": "https://www.blogger.com/",
 }
 
 _OAUTH = '<a href="https://github.com/mikf/gallery-dl#oauth">OAuth</a>'
@@ -362,7 +395,7 @@ IGNORE_LIST = (
 
 
 def domain(cls):
-    """Return the web-domain related to an extractor class"""
+    """Return the domain name associated with an extractor class"""
     try:
         url = sys.modules[cls.__module__].__doc__.split()[-1]
         if url.startswith("http"):
@@ -426,13 +459,16 @@ def build_extractor_list():
                 domains[category] = domain(extr)
         else:
             base = categories[extr.basecategory]
-            for category, root in extr.instances:
+            for category, root, info in extr.instances:
                 base[category].append(extr.subcategory)
                 if category not in domains:
-                    if not root and results:
-                        # use domain from first matching test
-                        test = results.category(category)[0]
-                        root = test["#class"].from_url(test["#url"]).root
+                    if not root:
+                        if category in URL_MAP:
+                            root = URL_MAP[category].rstrip("/")
+                        elif results:
+                            # use domain from first matching test
+                            test = results.category(category)[0]
+                            root = test["#class"].from_url(test["#url"]).root
                     domains[category] = root + "/"
 
     # sort subcategory lists
@@ -513,7 +549,7 @@ def generate_output(columns, categories, domains):
     TEMPLATE = """# Supported Sites
 
 <!-- auto-generated by {} -->
-Consider all sites to be NSFW unless otherwise known.
+Consider all listed sites to potentially be NSFW.
 
 <table>
 <thead valign="bottom">

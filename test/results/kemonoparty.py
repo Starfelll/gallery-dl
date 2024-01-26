@@ -60,7 +60,7 @@ __tests__ = (
     "added"      : "2020-05-06T20:28:02.302000",
     "content"    : str,
     "count"      : 1,
-    "date"       : "dt:2019-08-11 02:09:04",
+    "date"       : "dt:2019-08-10 17:09:04",
     "edited"     : None,
     "embed"      : dict,
     "extension"  : "jpeg",
@@ -68,7 +68,7 @@ __tests__ = (
     "hash"       : "210f35388e28bbcf756db18dd516e2d82ce758e0d32881eeee76d43e1716d382",
     "id"         : "506575",
     "num"        : 1,
-    "published"  : "2019-08-11T02:09:04",
+    "published"  : "2019-08-10T17:09:04",
     "service"    : "fanbox",
     "shared_file": False,
     "subcategory": "fanbox",
@@ -175,8 +175,41 @@ __tests__ = (
     "#class"   : kemonoparty.KemonopartyPostExtractor,
     "#urls"    : "https://kemono.su/data/88/52/88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86.jpg",
 
-    "revision_id": 142470,
+    "file"          : {
+        "hash": "88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86",
+        "name": "wip update.jpg",
+        "path": "/88/52/88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86.jpg",
+        "type": "file",
+    },
+    "attachments": [
+        {
+            "hash": "88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86",
+            "name": "wip update.jpg",
+            "path": "/88/52/88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86.jpg",
+            "type": "attachment",
+        },
+    ],
+    "filename"      : "wip update",
+    "extension"     : "jpg",
+    "hash"          : "88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86",
+    "revision_id"   : 142470,
     "revision_index": 2,
+    "revision_hash" : "e0e93281495e151b11636c156e52bfe9234c2a40",
+},
+
+{
+    "#url"     : "https://kemono.su/patreon/user/3161935/post/68231671",
+    "#comment" : "unique revisions (#5013)",
+    "#category": ("", "kemonoparty", "patreon"),
+    "#class"   : kemonoparty.KemonopartyPostExtractor,
+    "#options" : {"revisions": "unique"},
+    "#urls"    : "https://kemono.su/data/88/52/88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86.jpg",
+
+    "filename"      : "wip update",
+    "hash"          : "88521f71822dfa2f42df3beba319ea4fceda2a2d6dc59da0276a75238f743f86",
+    "revision_id"   : 0,
+    "revision_index": 1,
+    "revision_hash" : "e0e93281495e151b11636c156e52bfe9234c2a40",
 },
 
 {
@@ -190,6 +223,7 @@ __tests__ = (
 
     "revision_id": range(134996, 3052965),
     "revision_index": range(1, 9),
+    "revision_hash": "e0e93281495e151b11636c156e52bfe9234c2a40",
 },
 
 
@@ -293,21 +327,13 @@ __tests__ = (
 },
 
 {
-    "#url"     : "https://kemono.party/favorites",
+    "#url"     : "https://kemono.su/favorites",
     "#category": ("", "kemonoparty", "favorite"),
     "#class"   : kemonoparty.KemonopartyFavoriteExtractor,
     "#pattern" : kemonoparty.KemonopartyUserExtractor.pattern,
+    "#auth"    : True,
     "#count"   : 3,
-    "#sha1_url": "f4b5b796979bcba824af84206578c79101c7f0e1",
-},
-
-{
-    "#url"     : "https://kemono.party/favorites?type=post",
-    "#category": ("", "kemonoparty", "favorite"),
-    "#class"   : kemonoparty.KemonopartyFavoriteExtractor,
-    "#pattern" : kemonoparty.KemonopartyPostExtractor.pattern,
-    "#count"   : 3,
-    "#sha1_url": "ecfccf5f0d50b8d14caa7bbdcf071de5c1e5b90f",
+    "#sha1_url": "902c656c8002a3257ef9e255cb69bca1937373d4",
 },
 
 {
@@ -315,6 +341,7 @@ __tests__ = (
     "#category": ("", "kemonoparty", "favorite"),
     "#class"   : kemonoparty.KemonopartyFavoriteExtractor,
     "#pattern" : kemonoparty.KemonopartyPostExtractor.pattern,
+    "#auth"    : True,
     "#count"   : 3,
     "#sha1_url": "4be8e84cb384a907a8e7997baaf6287b451783b5",
 },

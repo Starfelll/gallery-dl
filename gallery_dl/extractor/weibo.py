@@ -41,9 +41,14 @@ class WeiboExtractor(Extractor):
     def request(self, url, **kwargs):
         response = Extractor.request(self, url, **kwargs)
 
-        if response.history and "passport.weibo.com" in response.url:
-            self._sina_visitor_system(response)
-            response = Extractor.request(self, url, **kwargs)
+        if response.history:
+            if "login.sina.com" in response.url:
+                raise exception.StopExtraction(
+                    "HTTP redirect to login page (%s)",
+                    response.url.partition("?")[0])
+            if "passport.weibo.com" in response.url:
+                self._sina_visitor_system(response)
+                response = Extractor.request(self, url, **kwargs)
 
         return response
 
@@ -219,9 +224,6 @@ class WeiboUserExtractor(WeiboExtractor):
     subcategory = "user"
     pattern = USER_PATTERN + r"(?:$|#)"
     example = "https://weibo.com/USER"
-
-    def initialize(self):
-        pass
 
     def items(self):
         base = "{}/u/{}?tabtype=".format(self.root, self._user_id())

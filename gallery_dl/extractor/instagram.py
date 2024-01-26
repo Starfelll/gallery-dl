@@ -217,9 +217,10 @@ class InstagramExtractor(Extractor):
                                  data["post_shortcode"])
                 continue
 
-            if "video_versions" in item:
+            video_versions = item.get("video_versions")
+            if video_versions:
                 video = max(
-                    item["video_versions"],
+                    video_versions,
                     key=lambda x: (x["width"], x["height"], x["type"]),
                 )
                 media = video
@@ -976,7 +977,7 @@ class InstagramGraphqlAPI():
             variables["after"] = extr._update_cursor(info["end_cursor"])
 
 
-@cache(maxage=90*24*3600, keyarg=1)
+@cache(maxage=90*86400, keyarg=1)
 def _login_impl(extr, username, password):
     extr.log.error("Login with username & password is no longer supported. "
                    "Use browser cookies instead.")

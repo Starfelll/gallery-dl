@@ -7,5 +7,6 @@
 # published by the Free Software Foundation.
 
 
-__version__ = "1.26.2-starry"
+
+__version__ = "1.26.8-starry"
 
