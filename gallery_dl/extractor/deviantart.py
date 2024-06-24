@@ -18,12 +18,12 @@ import binascii
 import time
 import re
 
-
 BASE_PATTERN = (
     r"(?:https?://)?(?:"
     r"(?:www\.)?(?:fx)?deviantart\.com/(?!watch/)([\w-]+)|"
     r"(?!www\.)([\w-]+)\.(?:fx)?deviantart\.com)"
 )
+DEFAULT_AVATAR = "https://a.deviantart.net/avatars/default.gif"
 
 
 class DeviantartExtractor(Extractor):
@@ -47,8 +47,9 @@ class DeviantartExtractor(Extractor):
         self.extra = self.config("extra", False)
         self.quality = self.config("quality", "100")
         self.original = self.config("original", True)
-        self.comments = self.config("comments", False)
         self.intermediary = self.config("intermediary", True)
+        self.comments_avatars = self.config("comments-avatars", False)
+        self.comments = self.comments_avatars or self.config("comments", False)
 
         self.api = DeviantartOAuthAPI(self)
         self.group = False
@@ -62,7 +63,12 @@ class DeviantartExtractor(Extractor):
             self.unwatch = None
 
         if self.quality:
-            self.quality = ",q_{}".format(self.quality)
+            if self.quality == "png":
+                self.quality = "-fullview.png?"
+                self.quality_sub = re.compile(r"-fullview\.[a-z0-9]+\?").sub
+            else:
+                self.quality = ",q_{}".format(self.quality)
+                self.quality_sub = re.compile(r",q_\d+").sub
 
         if self.original != "image":
             self._update_content = self._update_content_default
@@ -77,6 +83,16 @@ class DeviantartExtractor(Extractor):
             self.commit_journal = self._commit_journal_text
         else:
             self.commit_journal = None
+
+    def request(self, url, **kwargs):
+        if "fatal" not in kwargs:
+            kwargs["fatal"] = False
+        while True:
+            response = Extractor.request(self, url, **kwargs)
+            if response.status_code != 403 or \
+                    b"Request blocked." not in response.content:
+                return response
+            self.wait(seconds=300, reason="CloudFront block")
 
     def skip(self, num):
         self.offset += num
@@ -95,9 +111,9 @@ class DeviantartExtractor(Extractor):
         if self.user:
             group = self.config("group", True)
             if group:
-                profile = self.api.user_profile(self.user)
-                if profile:
-                    self.user = profile["user"]["username"]
+                user = _user_details(self, self.user)
+                if user:
+                    self.user = user["username"]
                     self.group = False
                 elif group == "skip":
                     self.log.info("Skipping group '%s'", self.user)
@@ -119,6 +135,12 @@ class DeviantartExtractor(Extractor):
                     "Skipping %s (deleted)", deviation["deviationid"])
                 continue
 
+            tier_access = deviation.get("tier_access")
+            if tier_access == "locked":
+                self.log.debug(
+                    "Skipping %s (access locked)", deviation["deviationid"])
+                continue
+
             if "premium_folder_data" in deviation:
                 data = self._fetch_premium(deviation)
                 if not data:
@@ -129,26 +151,7 @@ class DeviantartExtractor(Extractor):
             yield Message.Directory, deviation
 
             if "content" in deviation:
-                content = deviation["content"]
-
-                if self.original and deviation["is_downloadable"]:
-                    self._update_content(deviation, content)
-                elif self.jwt:
-                    self._update_token(deviation, content)
-                elif content["src"].startswith("https://images-wixmp-"):
-                    if self.intermediary and deviation["index"] <= 790677560:
-                        # https://github.com/r888888888/danbooru/issues/4069
-                        intermediary, count = re.subn(
-                            r"(/f/[^/]+/[^/]+)/v\d+/.*",
-                            r"/intermediary\1", content["src"], 1)
-                        if count:
-                            deviation["is_original"] = False
-                            deviation["_fallback"] = (content["src"],)
-                            content["src"] = intermediary
-                    if self.quality:
-                        content["src"] = re.sub(
-                            r",q_\d+", self.quality, content["src"], 1)
-
+                content = self._extract_content(deviation)
                 yield self.commit(deviation, content)
 
             elif deviation["is_downloadable"]:
@@ -180,6 +183,20 @@ class DeviantartExtractor(Extractor):
                     deviation["is_original"] = True
                     yield self.commit_journal(deviation, journal)
 
+            if self.comments_avatars:
+                for comment in deviation["comments"]:
+                    user = comment["user"]
+                    name = user["username"].lower()
+                    if user["usericon"] == DEFAULT_AVATAR:
+                        self.log.debug(
+                            "Skipping avatar of '%s' (default)", name)
+                        continue
+                    _user_details.update(name, user)
+
+                    url = "{}/{}/avatar/".format(self.root, name)
+                    comment["_extractor"] = DeviantartAvatarExtractor
+                    yield Message.Queue, url, comment
+
             if not self.extra:
                 continue
 
@@ -206,7 +223,9 @@ class DeviantartExtractor(Extractor):
         """Adjust the contents of a Deviation-object"""
         if "index" not in deviation:
             try:
-                if deviation["url"].startswith("https://sta.sh"):
+                if deviation["url"].startswith((
+                    "https://www.deviantart.com/stash/", "https://sta.sh",
+                )):
                     filename = deviation["content"]["src"].split("/")[5]
                     deviation["index_base36"] = filename.partition("-")[0][1:]
                     deviation["index"] = id_from_base36(
@@ -333,6 +352,33 @@ class DeviantartExtractor(Extractor):
         deviation["extension"] = "txt"
         return Message.Url, txt, deviation
 
+    def _extract_content(self, deviation):
+        content = deviation["content"]
+
+        if self.original and deviation["is_downloadable"]:
+            self._update_content(deviation, content)
+            return content
+
+        if self.jwt:
+            self._update_token(deviation, content)
+            return content
+
+        if content["src"].startswith("https://images-wixmp-"):
+            if self.intermediary and deviation["index"] <= 790677560:
+                # https://github.com/r888888888/danbooru/issues/4069
+                intermediary, count = re.subn(
+                    r"(/f/[^/]+/[^/]+)/v\d+/.*",
+                    r"/intermediary\1", content["src"], 1)
+                if count:
+                    deviation["is_original"] = False
+                    deviation["_fallback"] = (content["src"],)
+                    content["src"] = intermediary
+            if self.quality:
+                content["src"] = self.quality_sub(
+                    self.quality, content["src"], 1)
+
+        return content
+
     @staticmethod
     def _find_folder(folders, name, uuid):
         if uuid.isdecimal():
@@ -426,18 +472,12 @@ class DeviantartExtractor(Extractor):
 
     def _limited_request(self, url, **kwargs):
         """Limits HTTP requests to one every 2 seconds"""
-        kwargs["fatal"] = None
         diff = time.time() - DeviantartExtractor._last_request
         if diff < 2.0:
             self.sleep(2.0 - diff, "request")
-
-        while True:
-            response = self.request(url, **kwargs)
-            if response.status_code != 403 or \
-                    b"Request blocked." not in response.content:
-                DeviantartExtractor._last_request = time.time()
-                return response
-            self.wait(seconds=180)
+        response = self.request(url, **kwargs)
+        DeviantartExtractor._last_request = time.time()
+        return response
 
     def _fetch_premium(self, deviation):
         try:
@@ -550,13 +590,18 @@ class DeviantartAvatarExtractor(DeviantartExtractor):
 
     def deviations(self):
         name = self.user.lower()
-        profile = self.api.user_profile(name)
-        if not profile:
+        user = _user_details(self, name)
+        if not user:
             return ()
 
-        user = profile["user"]
         icon = user["usericon"]
-        index = icon.rpartition("?")[2]
+        if icon == DEFAULT_AVATAR:
+            self.log.debug("Skipping avatar of '%s' (default)", name)
+            return ()
+
+        _, sep, index = icon.rpartition("?")
+        if not sep:
+            index = "0"
 
         formats = self.config("formats")
         if not formats:
@@ -639,7 +684,8 @@ class DeviantartStashExtractor(DeviantartExtractor):
     """Extractor for sta.sh-ed deviations"""
     subcategory = "stash"
     archive_fmt = "{index}.{extension}"
-    pattern = r"(?:https?://)?sta\.sh/([a-z0-9]+)"
+    pattern = (r"(?:https?://)?(?:(?:www\.)?deviantart\.com/stash|sta\.sh)"
+               r"/([a-z0-9]+)")
     example = "https://sta.sh/abcde"
 
     skip = Extractor.skip
@@ -660,7 +706,7 @@ class DeviantartStashExtractor(DeviantartExtractor):
             if uuid:
                 deviation = self.api.deviation(uuid)
                 deviation["index"] = text.parse_int(text.extr(
-                    page, 'gmi-deviationid="', '"'))
+                    page, '\\"deviationId\\":', ','))
                 yield deviation
                 return
 
@@ -1067,9 +1113,8 @@ class DeviantartOAuthAPI():
         if not isinstance(self.mature, str):
             self.mature = "true" if self.mature else "false"
 
-        self.folders = extractor.config("folders", False)
-        self.metadata = extractor.extra or extractor.config("metadata", False)
         self.strategy = extractor.config("pagination")
+        self.folders = extractor.config("folders", False)
         self.public = extractor.config("public", True)
 
         client_id = extractor.config("client-id")
@@ -1087,6 +1132,42 @@ class DeviantartOAuthAPI():
                 token = None
         self.refresh_token_key = token
 
+        metadata = extractor.config("metadata", False)
+        if not metadata:
+            metadata = bool(extractor.extra)
+        if metadata:
+            self.metadata = True
+
+            if isinstance(metadata, str):
+                if metadata == "all":
+                    metadata = ("submission", "camera", "stats",
+                                "collection", "gallery")
+                else:
+                    metadata = metadata.replace(" ", "").split(",")
+            elif not isinstance(metadata, (list, tuple)):
+                metadata = ()
+
+            self._metadata_params = {"mature_content": self.mature}
+            self._metadata_public = None
+            if metadata:
+                # extended metadata
+                self.limit = 10
+                for param in metadata:
+                    self._metadata_params["ext_" + param] = "1"
+                if "ext_collection" in self._metadata_params or \
+                        "ext_gallery" in self._metadata_params:
+                    if token:
+                        self._metadata_public = False
+                    else:
+                        self.log.error("'collection' and 'gallery' metadata "
+                                       "require a refresh token")
+            else:
+                # base metadata
+                self.limit = 50
+        else:
+            self.metadata = False
+            self.limit = None
+
         self.log.debug(
             "Using %s API credentials (client-id %s)",
             "default" if self.client_id == self.CLIENT_ID else "custom",
@@ -1096,14 +1177,14 @@ class DeviantartOAuthAPI():
     def browse_deviantsyouwatch(self, offset=0):
         """Yield deviations from users you watch"""
         endpoint = "/browse/deviantsyouwatch"
-        params = {"limit": "50", "offset": offset,
+        params = {"limit": 50, "offset": offset,
                   "mature_content": self.mature}
         return self._pagination(endpoint, params, public=False)
 
     def browse_posts_deviantsyouwatch(self, offset=0):
         """Yield posts from users you watch"""
         endpoint = "/browse/posts/deviantsyouwatch"
-        params = {"limit": "50", "offset": offset,
+        params = {"limit": 50, "offset": offset,
                   "mature_content": self.mature}
         return self._pagination(endpoint, params, public=False, unpack=True)
 
@@ -1112,7 +1193,7 @@ class DeviantartOAuthAPI():
         endpoint = "/browse/newest"
         params = {
             "q"             : query,
-            "limit"         : 50 if self.metadata else 120,
+            "limit"         : 120,
             "offset"        : offset,
             "mature_content": self.mature,
         }
@@ -1123,7 +1204,7 @@ class DeviantartOAuthAPI():
         endpoint = "/browse/popular"
         params = {
             "q"             : query,
-            "limit"         : 50 if self.metadata else 120,
+            "limit"         : 120,
             "timerange"     : timerange,
             "offset"        : offset,
             "mature_content": self.mature,
@@ -1230,8 +1311,11 @@ class DeviantartOAuthAPI():
             "deviationids[{}]={}".format(num, deviation["deviationid"])
             for num, deviation in enumerate(deviations)
         )
-        params = {"mature_content": self.mature}
-        return self._call(endpoint, params=params)["metadata"]
+        return self._call(
+            endpoint,
+            params=self._metadata_params,
+            public=self._metadata_public,
+        )["metadata"]
 
     def gallery(self, username, folder_id, offset=0, extend=True, public=None):
         """Yield all Deviation-objects contained in a gallery folder"""
@@ -1338,9 +1422,14 @@ class DeviantartOAuthAPI():
             self.authenticate(None if public else self.refresh_token_key)
             kwargs["headers"] = self.headers
             response = self.extractor.request(url, **kwargs)
-            data = response.json()
-            status = response.status_code
 
+            try:
+                data = response.json()
+            except ValueError:
+                self.log.error("Unable to parse API response")
+                data = {}
+
+            status = response.status_code
             if 200 <= status < 400:
                 if self.delay > self.delay_min:
                     self.delay -= 1
@@ -1368,9 +1457,8 @@ class DeviantartOAuthAPI():
                         self.log.info(
                             "Register your own OAuth application and use its "
                             "credentials to prevent this error: "
-                            "https://github.com/mikf/gallery-dl/blob/master/do"
-                            "cs/configuration.rst#extractordeviantartclient-id"
-                            "--client-secret")
+                            "https://gdl-org.github.io/docs/configuration.html"
+                            "#extractor-deviantart-client-id-client-secret")
             else:
                 if log:
                     self.log.error(msg)
@@ -1392,6 +1480,9 @@ class DeviantartOAuthAPI():
         warn = True
         if public is None:
             public = self.public
+
+        if self.limit and params["limit"] > self.limit:
+            params["limit"] = (params["limit"] // self.limit) * self.limit
 
         while True:
             data = self._call(endpoint, params=params, public=public)
@@ -1464,6 +1555,15 @@ class DeviantartOAuthAPI():
 
     def _metadata(self, deviations):
         """Add extended metadata to each deviation object"""
+        if len(deviations) <= self.limit:
+            self._metadata_batch(deviations)
+        else:
+            n = self.limit
+            for index in range(0, len(deviations), n):
+                self._metadata_batch(deviations[index:index+n])
+
+    def _metadata_batch(self, deviations):
+        """Fetch extended metadata for a single batch of deviations"""
         for deviation, metadata in zip(
                 deviations, self.deviation_metadata(deviations)):
             deviation.update(metadata)
@@ -1630,15 +1730,16 @@ class DeviantartEclipseAPI():
         url = "{}/{}/about".format(self.extractor.root, user)
         page = self.request(url).text
 
-        gruserid, pos = text.extract(page, ' data-userid="', '"')
+        gruser_id = text.extr(page, ' data-userid="', '"')
 
-        pos = page.find('\\"type\\":\\"watching\\"', pos)
+        pos = page.find('\\"name\\":\\"watching\\"')
         if pos < 0:
-            raise exception.NotFoundError("module")
-        moduleid = text.rextract(page, '\\"id\\":', ',', pos)[0].strip('" ')
+            raise exception.NotFoundError("'watching' module ID")
+        module_id = text.rextract(
+            page, '\\"id\\":', ',', pos)[0].strip('" ')
 
         self._fetch_csrf_token(page)
-        return gruserid, moduleid
+        return gruser_id, module_id
 
     def _fetch_csrf_token(self, page=None):
         if page is None:
@@ -1646,6 +1747,14 @@ class DeviantartEclipseAPI():
         self.csrf_token = token = text.extr(
             page, "window.__CSRF_TOKEN__ = '", "'")
         return token
+
+
+@memcache(keyarg=1)
+def _user_details(extr, name):
+    try:
+        return extr.api.user_profile(name)["user"]
+    except Exception:
+        return None
 
 
 @cache(maxage=36500*86400, keyarg=0)

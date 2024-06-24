@@ -53,6 +53,15 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.pinterest.jp/gdldev/bname/",
+    "#comment" : "board & section with /?# in name (#5104)",
+    "#category": ("", "pinterest", "board"),
+    "#class"   : pinterest.PinterestBoardExtractor,
+    "#options" : {"sections": True},
+    "#urls"    : "https://www.pinterest.jp/gdldev/bname/id:5345901183739414095",
+},
+
+{
     "#url"     : "https://www.pinterest.de/g1952849/secret/",
     "#comment" : "secret board (#1055)",
     "#category": ("", "pinterest", "board"),
@@ -101,7 +110,7 @@ __tests__ = (
     "#url"     : "https://www.pinterest.de/digitalmomblog/_created/",
     "#category": ("", "pinterest", "created"),
     "#class"   : pinterest.PinterestCreatedExtractor,
-    "#pattern" : r"https://i\.pinimg\.com/originals/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{32}\.(jpg|png)",
+    "#pattern" : r"ytdl:|https://i\.pinimg\.com/originals/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{32}\.(jpg|png)",
     "#range"   : "1-10",
     "#count"   : 10,
 },

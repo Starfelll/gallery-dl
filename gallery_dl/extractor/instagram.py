@@ -165,9 +165,10 @@ class InstagramExtractor(Extractor):
             data = {
                 "post_id" : post["pk"],
                 "post_shortcode": post["code"],
-                "likes": post["like_count"],
+                "likes": post.get("like_count", 0),
                 "pinned": post.get("timeline_pinned_user_ids", ()),
                 "date": text.parse_timestamp(post.get("taken_at")),
+                "liked": post.get("has_liked", False),
             }
 
             caption = post["caption"]
@@ -270,6 +271,7 @@ class InstagramExtractor(Extractor):
             "typename"   : typename,
             "date"       : text.parse_timestamp(post["taken_at_timestamp"]),
             "likes"      : post["edge_media_preview_like"]["count"],
+            "liked"      : post.get("viewer_has_liked", False),
             "pinned"     : pinned,
             "owner_id"   : owner["id"],
             "username"   : owner.get("username"),
@@ -689,7 +691,10 @@ class InstagramRestAPI():
     def reels_media(self, reel_ids):
         endpoint = "/v1/feed/reels_media/"
         params = {"reel_ids": reel_ids}
-        return self._call(endpoint, params=params)["reels_media"]
+        try:
+            return self._call(endpoint, params=params)["reels_media"]
+        except KeyError:
+            raise exception.AuthorizationError("Login required")
 
     def tags_media(self, tag):
         for section in self.tags_sections(tag):
@@ -733,7 +738,7 @@ class InstagramRestAPI():
                 not user["followed_by_viewer"]:
             name = user["username"]
             s = "" if name.endswith("s") else "s"
-            raise exception.StopExtraction("%s'%s posts are private", name, s)
+            self.extractor.log.warning("%s'%s posts are private", name, s)
         self.extractor._assign_user(user)
         return user["id"]
 

@@ -59,15 +59,21 @@ def ensure_http_scheme(url, scheme="https://"):
 def root_from_url(url, scheme="https://"):
     """Extract scheme and domain from a URL"""
     if not url.startswith(("https://", "http://")):
-        return scheme + url[:url.index("/")]
-    return url[:url.index("/", 8)]
+        try:
+            return scheme + url[:url.index("/")]
+        except ValueError:
+            return scheme + url
+    try:
+        return url[:url.index("/", 8)]
+    except ValueError:
+        return url
 
 
 def filename_from_url(url):
     """Extract the last part of an URL to use as a filename"""
     try:
         return url.partition("?")[0].rpartition("/")[2]
-    except (TypeError, AttributeError):
+    except Exception:
         return ""
 
 
@@ -116,7 +122,7 @@ def extract(txt, begin, end, pos=0):
         first = txt.index(begin, pos) + len(begin)
         last = txt.index(end, first)
         return txt[first:last], last+len(end)
-    except (ValueError, TypeError, AttributeError):
+    except Exception:
         return None, pos
 
 
@@ -125,7 +131,7 @@ def extr(txt, begin, end, default=""):
     try:
         first = txt.index(begin) + len(begin)
         return txt[first:txt.index(end, first)]
-    except (ValueError, TypeError, AttributeError):
+    except Exception:
         return default
 
 
@@ -135,7 +141,7 @@ def rextract(txt, begin, end, pos=-1):
         first = txt.rindex(begin, 0, pos)
         last = txt.index(end, first + lbeg)
         return txt[first + lbeg:last], first
-    except (ValueError, TypeError, AttributeError):
+    except Exception:
         return None, pos
 
 
@@ -161,7 +167,7 @@ def extract_iter(txt, begin, end, pos=0):
             last = index(end, first)
             pos = last + lend
             yield txt[first:last]
-    except (ValueError, TypeError, AttributeError):
+    except Exception:
         return
 
 
@@ -174,7 +180,7 @@ def extract_from(txt, pos=0, default=""):
             last = index(end, first)
             pos = last + len(end)
             return txt[first:last]
-        except (ValueError, TypeError, AttributeError):
+        except Exception:
             return default
     return extr
 
@@ -194,7 +200,7 @@ def parse_bytes(value, default=0, suffixes="bkmgtp"):
     """Convert a bytes-amount ("500k", "2.5M", ...) to int"""
     try:
         last = value[-1].lower()
-    except (TypeError, LookupError):
+    except Exception:
         return default
 
     if last in suffixes:
@@ -215,7 +221,7 @@ def parse_int(value, default=0):
         return default
     try:
         return int(value)
-    except (ValueError, TypeError):
+    except Exception:
         return default
 
 
@@ -225,7 +231,7 @@ def parse_float(value, default=0.0):
         return default
     try:
         return float(value)
-    except (ValueError, TypeError):
+    except Exception:
         return default
 
 
@@ -236,7 +242,7 @@ def parse_query(qs):
         for key, value in urllib.parse.parse_qsl(qs):
             if key not in result:
                 result[key] = value
-    except AttributeError:
+    except Exception:
         pass
     return result
 
@@ -245,7 +251,7 @@ def parse_timestamp(ts, default=None):
     """Create a datetime object from a unix timestamp"""
     try:
         return datetime.datetime.utcfromtimestamp(int(ts))
-    except (TypeError, ValueError, OverflowError):
+    except Exception:
         return default
 
 

@@ -25,15 +25,14 @@ class WikimediaExtractor(BaseExtractor):
         BaseExtractor.__init__(self, match)
         path = match.group(match.lastindex)
 
-        if self.category == "fandom":
-            self.category = \
-                "fandom-" + self.root.partition(".")[0].rpartition("/")[2]
+        if self.category == "wikimedia":
+            self.category = self.root.split(".")[-2]
+        elif self.category in ("fandom", "wikigg"):
+            self.category = "{}-{}".format(
+                self.category, self.root.partition(".")[0].rpartition("/")[2])
 
         if path.startswith("wiki/"):
             path = path[5:]
-            self.api_path = "/w/api.php"
-        else:
-            self.api_path = "/api.php"
 
         pre, sep, _ = path.partition(":")
         prefix = pre.lower() if sep else None
@@ -66,18 +65,22 @@ class WikimediaExtractor(BaseExtractor):
             else:
                 self.api_url = api_path
         else:
-            self.api_url = self.root + self.api_path
+            self.api_url = self.root + "/api.php"
 
     def items(self):
         for info in self._pagination(self.params):
-            image = info["imageinfo"][0]
+            try:
+                image = info["imageinfo"][0]
+            except LookupError:
+                self.log.debug("Missing 'imageinfo' for %s", info)
+                continue
 
             image["metadata"] = {
                 m["name"]: m["value"]
-                for m in image["metadata"]}
+                for m in image["metadata"] or ()}
             image["commonmetadata"] = {
                 m["name"]: m["value"]
-                for m in image["commonmetadata"]}
+                for m in image["commonmetadata"] or ()}
 
             filename = image["canonicaltitle"]
             image["filename"], _, image["extension"] = \
@@ -122,54 +125,55 @@ class WikimediaExtractor(BaseExtractor):
 
 
 BASE_PATTERN = WikimediaExtractor.update({
-    "wikipedia": {
+    "wikimedia": {
         "root": None,
-        "pattern": r"[a-z]{2,}\.wikipedia\.org",
-    },
-    "wiktionary": {
-        "root": None,
-        "pattern": r"[a-z]{2,}\.wiktionary\.org",
-    },
-    "wikiquote": {
-        "root": None,
-        "pattern": r"[a-z]{2,}\.wikiquote\.org",
-    },
-    "wikibooks": {
-        "root": None,
-        "pattern": r"[a-z]{2,}\.wikibooks\.org",
-    },
-    "wikisource": {
-        "root": None,
-        "pattern": r"[a-z]{2,}\.wikisource\.org",
-    },
-    "wikinews": {
-        "root": None,
-        "pattern": r"[a-z]{2,}\.wikinews\.org",
-    },
-    "wikiversity": {
-        "root": None,
-        "pattern": r"[a-z]{2,}\.wikiversity\.org",
+        "pattern": r"[a-z]{2,}\."
+                   r"wik(?:i(?:pedia|quote|books|source|news|versity|data"
+                   r"|voyage)|tionary)"
+                   r"\.org",
+        "api-path": "/w/api.php",
     },
     "wikispecies": {
         "root": "https://species.wikimedia.org",
         "pattern": r"species\.wikimedia\.org",
+        "api-path": "/w/api.php",
     },
     "wikimediacommons": {
         "root": "https://commons.wikimedia.org",
         "pattern": r"commons\.wikimedia\.org",
+        "api-path": "/w/api.php",
     },
     "mediawiki": {
         "root": "https://www.mediawiki.org",
         "pattern": r"(?:www\.)?mediawiki\.org",
+        "api-path": "/w/api.php",
     },
     "fandom": {
         "root": None,
         "pattern": r"[\w-]+\.fandom\.com",
-        "api-path": "/api.php",
+    },
+    "wikigg": {
+        "root": None,
+        "pattern": r"\w+\.wiki\.gg",
     },
     "mariowiki": {
         "root": "https://www.mariowiki.com",
         "pattern": r"(?:www\.)?mariowiki\.com",
+    },
+    "bulbapedia": {
+        "root": "https://bulbapedia.bulbagarden.net",
+        "pattern": r"(?:bulbapedia|archives)\.bulbagarden\.net",
+        "api-path": "/w/api.php",
+    },
+    "pidgiwiki": {
+        "root": "https://www.pidgi.net",
+        "pattern": r"(?:www\.)?pidgi\.net",
+        "api-path": "/wiki/api.php",
+    },
+    "azurlanewiki": {
+        "root": "https://azurlane.koumakan.jp",
+        "pattern": r"azurlane\.koumakan\.jp",
+        "api-path": "/w/api.php",
     },
 })
 

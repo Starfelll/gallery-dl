@@ -10,7 +10,6 @@
 # https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/cookies.py
 
 import binascii
-import contextlib
 import ctypes
 import logging
 import os
@@ -147,7 +146,8 @@ def load_cookies_chrome(cookiejar, browser_name, profile=None,
             set_cookie(Cookie(
                 0, name, value, None, False,
                 domain, bool(domain), domain.startswith("."),
-                path, bool(path), secure, expires, False, None, None, {},
+                path, bool(path), secure, expires or None, False,
+                None, None, {},
             ))
 
     if failed_cookies > 0:
@@ -188,8 +188,8 @@ def _firefox_cookies_database(profile=None, container=None):
             os.path.dirname(path), "containers.json")
 
         try:
-            with open(containers_path) as file:
-                identities = util.json_loads(file.read())["identities"]
+            with open(containers_path) as fp:
+                identities = util.json_loads(fp.read())["identities"]
         except OSError:
             _log_error("Unable to read Firefox container database at '%s'",
                        containers_path)
@@ -682,7 +682,8 @@ def _get_gnome_keyring_password(browser_keyring_name):
     # lists all keys and presumably searches for its key in the list.
     # It appears that we must do the same.
     # https://github.com/jaraco/keyring/issues/556
-    with contextlib.closing(secretstorage.dbus_init()) as con:
+    con = secretstorage.dbus_init()
+    try:
         col = secretstorage.get_default_collection(con)
         label = browser_keyring_name + " Safe Storage"
         for item in col.get_all_items():
@@ -691,6 +692,8 @@ def _get_gnome_keyring_password(browser_keyring_name):
         else:
             _log_error("Failed to read from GNOME keyring")
             return b""
+    finally:
+        con.close()
 
 
 def _get_linux_keyring_password(browser_keyring_name, keyring):
@@ -742,8 +745,8 @@ def _get_windows_v10_key(browser_root):
         _log_error("Unable to find Local State file")
         return None
     _log_debug("Found Local State file at '%s'", path)
-    with open(path, encoding="utf-8") as file:
-        data = util.json_loads(file.read())
+    with open(path, encoding="utf-8") as fp:
+        data = util.json_loads(fp.read())
     try:
         base64_key = data["os_crypt"]["encrypted_key"]
     except KeyError:
@@ -857,7 +860,7 @@ class DatabaseConnection():
 
 
 def Popen_communicate(*args):
-    proc = subprocess.Popen(
+    proc = util.Popen(
         args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
         stdout, stderr = proc.communicate()
@@ -999,6 +1002,12 @@ def _decrypt_windows_dpapi(ciphertext):
 
 
 def _find_most_recently_used_file(root, filename):
+    # if the provided root points to an exact profile path
+    # check if it contains the wanted filename
+    first_choice = os.path.join(root, filename)
+    if os.path.exists(first_choice):
+        return first_choice
+
     # if there are multiple browser profiles, take the most recently used one
     paths = []
     for curr_root, dirs, files in os.walk(root):

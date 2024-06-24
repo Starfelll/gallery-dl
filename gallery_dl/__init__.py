@@ -38,6 +38,11 @@ def main():
             except ImportError:
                 import toml
             config.load(args.configs_toml, strict=True, loads=toml.loads)
+        if not args.colors:
+            output.ANSI = False
+            config.set((), "colors", False)
+            if util.WINDOWS:
+                config.set(("output",), "ansi", False)
         if args.filename:
             filename = args.filename
             if filename == "/O":
@@ -86,7 +91,7 @@ def main():
                     signal.signal(signal_num, signal.SIG_IGN)
 
         # enable ANSI escape sequences on Windows
-        if util.WINDOWS and config.get(("output",), "ansi"):
+        if util.WINDOWS and config.get(("output",), "ansi", output.COLORS):
             from ctypes import windll, wintypes, byref
             kernel32 = windll.kernel32
             mode = wintypes.DWORD()
@@ -113,7 +118,7 @@ def main():
 
         # loglevels
         output.configure_logging(args.loglevel)
-        if args.loglevel >= logging.ERROR:
+        if args.loglevel >= logging.WARNING:
             config.set(("output",), "mode", "null")
             config.set(("downloader",), "progress", None)
         elif args.loglevel <= logging.DEBUG:
@@ -122,7 +127,7 @@ def main():
 
             extra = ""
             if util.EXECUTABLE:
-                extra = " - Executable"
+                extra = " - Executable ({})".format(version.__variant__)
             else:
                 git_head = util.git_head()
                 if git_head:
@@ -178,7 +183,13 @@ def main():
             else:
                 extractor._module_iter = iter(modules[0])
 
-        if args.list_modules:
+        if args.update:
+            from . import update
+            extr = update.UpdateExtractor.from_url("update:" + args.update)
+            ujob = update.UpdateJob(extr)
+            return ujob.run()
+
+        elif args.list_modules:
             extractor.modules.append("")
             sys.stdout.write("\n".join(extractor.modules))
 
@@ -202,14 +213,20 @@ def main():
 
             if cnt is None:
                 log.error("Database file not available")
+                return 1
             else:
                 log.info(
                     "Deleted %d %s from '%s'",
                     cnt, "entry" if cnt == 1 else "entries", cache._path(),
                 )
 
-        elif args.config_init:
-            return config.initialize()
+        elif args.config:
+            if args.config == "init":
+                return config.initialize()
+            elif args.config == "status":
+                return config.status()
+            else:
+                return config.open_extern()
 
         else:
             if not args.urls and not args.input_files:
@@ -294,6 +311,7 @@ def main():
 
                 input_manager.next()
             return retval
+        return 0
 
     except KeyboardInterrupt:
         raise SystemExit("\nKeyboardInterrupt")

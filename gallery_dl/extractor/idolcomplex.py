@@ -35,7 +35,7 @@ class IdolcomplexExtractor(SankakuExtractor):
 
     def _init(self):
         self.find_pids = re.compile(
-            r" href=[\"#]/\w\w/posts/([0-9a-f]+)"
+            r" href=[\"#]/\w\w/posts/(\w+)"
         ).findall
         self.find_tags = re.compile(
             r'tag-type-([^"]+)">\s*<a [^>]*?href="/[^?]*\?tags=([^"]+)'
@@ -101,9 +101,8 @@ class IdolcomplexExtractor(SankakuExtractor):
         page = self.request(url, retries=10).text
         extr = text.extract_from(page)
 
-        tags = extr("<title>", " | ")
-        vavg = extr('itemprop="ratingValue">', "<")
-        vcnt = extr('itemprop="reviewCount">', "<")
+        vavg = extr('id="rating"', "</ul>")
+        vcnt = extr('>Votes</strong>:', "<")
         pid = extr(">Post ID:", "<")
         created = extr(' title="', '"')
 
@@ -120,10 +119,10 @@ class IdolcomplexExtractor(SankakuExtractor):
         rating = extr(">Rating:", "<br")
 
         data = {
-            "id"          : text.parse_int(pid),
+            "id"          : pid.strip(),
             "md5"         : file_url.rpartition("/")[2].partition(".")[0],
-            "tags"        : text.unescape(tags),
-            "vote_average": text.parse_float(vavg),
+            "vote_average": (1.0 * vavg.count('class="star-full"') +
+                             0.5 * vavg.count('class="star-half"')),
             "vote_count"  : text.parse_int(vcnt),
             "created_at"  : created,
             "date"        : text.parse_datetime(
@@ -206,8 +205,8 @@ class IdolcomplexTagExtractor(IdolcomplexExtractor):
             if not next_url:
                 return
 
-            next_params = text.parse_query(text.unescape(text.unescape(
-                next_url).lstrip("?/")))
+            next_params = text.parse_query(text.unquote(text.unescape(
+                text.unescape(next_url).lstrip("?/"))))
 
             if "next" in next_params:
                 # stop if the same "next" value occurs twice in a row (#265)
@@ -222,8 +221,8 @@ class IdolcomplexPoolExtractor(IdolcomplexExtractor):
     subcategory = "pool"
     directory_fmt = ("{category}", "pool", "{pool}")
     archive_fmt = "p_{pool}_{id}"
-    pattern = BASE_PATTERN + r"/pools?/show/(\d+)"
-    example = "https://idol.sankakucomplex.com/pools/show/12345"
+    pattern = BASE_PATTERN + r"/pools?/(?:show/)?(\w+)"
+    example = "https://idol.sankakucomplex.com/pools/0123456789abcdef"
     per_page = 24
 
     def __init__(self, match):
@@ -258,7 +257,7 @@ class IdolcomplexPostExtractor(IdolcomplexExtractor):
     """Extractor for single images from idol.sankakucomplex.com"""
     subcategory = "post"
     archive_fmt = "{id}"
-    pattern = BASE_PATTERN + r"/posts?/(?:show/)?([0-9a-f]+)"
+    pattern = BASE_PATTERN + r"/posts?/(?:show/)?(\w+)"
     example = "https://idol.sankakucomplex.com/posts/0123456789abcdef"
 
     def __init__(self, match):

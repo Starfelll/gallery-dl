@@ -46,8 +46,8 @@ __tests__ = (
     "uniquePosters"   : 9,
     "usesCustomCss"   : True,
     "usesCustomJs"    : False,
-    "?wsPort"         : 8880,
-    "?wssPort"        : 2087,
+    "?wsPort"         : int,
+    "?wssPort"        : int,
 },
 
 {
@@ -73,7 +73,7 @@ __tests__ = (
     "#category": ("", "8chan", "board"),
     "#class"   : _8chan._8chanBoardExtractor,
     "#pattern" : _8chan._8chanThreadExtractor.pattern,
-    "#count"   : 27,
+    "#count"   : range(24, 28),
 },
 
 {

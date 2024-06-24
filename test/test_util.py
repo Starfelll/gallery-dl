@@ -745,12 +745,24 @@ def hash(value):
         self.assertEqual(repr(obj), repr(None))
         self.assertEqual(format(obj), str(None))
         self.assertEqual(format(obj, "%F"), str(None))
+
         self.assertIs(obj.attr, obj)
         self.assertIs(obj["key"], obj)
         self.assertIs(obj(), obj)
         self.assertIs(obj(1, "a"), obj)
         self.assertIs(obj(foo="bar"), obj)
         self.assertEqual(util.json_dumps(obj), "null")
+
+        self.assertLess(obj, "foo")
+        self.assertLessEqual(obj, None)
+        self.assertFalse(obj == obj)
+        self.assertTrue(obj != obj)
+        self.assertGreater(123, obj)
+        self.assertGreaterEqual(1.23, obj)
+
+        mapping = {}
+        mapping[obj] = 123
+        self.assertIn(obj, mapping)
 
         i = 0
         for _ in obj:
@@ -774,5 +786,5 @@ class TestExtractorAlt(TestExtractor):
     subcategory = "test_subcategory"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

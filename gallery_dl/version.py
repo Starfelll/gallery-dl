@@ -7,6 +7,5 @@
 # published by the Free Software Foundation.
 
 
-
-__version__ = "1.26.8-starry"
-
+__version__ = "1.27.1-starry"
+__variant__ = None

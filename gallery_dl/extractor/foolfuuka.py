@@ -24,6 +24,8 @@ class FoolfuukaExtractor(BaseExtractor):
         BaseExtractor.__init__(self, match)
         if self.category == "b4k":
             self.remote = self._remote_direct
+        elif self.category == "archivedmoe":
+            self.referer = False
 
     def items(self):
         yield Message.Directory, self.metadata()
@@ -53,9 +55,12 @@ class FoolfuukaExtractor(BaseExtractor):
 
     def remote(self, media):
         """Resolve a remote media link"""
-        needle = '<meta http-equiv="Refresh" content="0; url='
         page = self.request(media["remote_media_link"]).text
-        return text.extr(page, needle, '"')
+        url = text.extr(page, 'http-equiv="Refresh" content="0; url=', '"')
+        if url.endswith(".webm") and \
+                url.startswith("https://thebarchive.com/"):
+            return url[:-1]
+        return url
 
     @staticmethod
     def _remote_direct(media):
@@ -112,8 +117,8 @@ class FoolfuukaThreadExtractor(FoolfuukaExtractor):
 
     def __init__(self, match):
         FoolfuukaExtractor.__init__(self, match)
-        self.board = match.group(match.lastindex-1)
-        self.thread = match.group(match.lastindex)
+        self.board = self.groups[-2]
+        self.thread = self.groups[-1]
         self.data = None
 
     def metadata(self):
@@ -135,20 +140,22 @@ class FoolfuukaThreadExtractor(FoolfuukaExtractor):
 class FoolfuukaBoardExtractor(FoolfuukaExtractor):
     """Base extractor for FoolFuuka based boards/archives"""
     subcategory = "board"
-    pattern = BASE_PATTERN + r"/([^/?#]+)/\d*$"
+    pattern = BASE_PATTERN + r"/([^/?#]+)(?:/(?:page/)?(\d*))?$"
     example = "https://archived.moe/a/"
 
     def __init__(self, match):
         FoolfuukaExtractor.__init__(self, match)
-        self.board = match.group(match.lastindex)
+        self.board = self.groups[-2]
+        self.page = self.groups[-1]
 
     def items(self):
         index_base = "{}/_/api/chan/index/?board={}&page=".format(
             self.root, self.board)
         thread_base = "{}/{}/thread/".format(self.root, self.board)
 
-        for page in itertools.count(1):
-            with self.request(index_base + format(page)) as response:
+        page = self.page
+        for pnum in itertools.count(text.parse_int(page, 1)):
+            with self.request(index_base + format(pnum)) as response:
                 try:
                     threads = response.json()
                 except ValueError:
@@ -162,6 +169,9 @@ class FoolfuukaBoardExtractor(FoolfuukaExtractor):
                 thread["_extractor"] = FoolfuukaThreadExtractor
                 yield Message.Queue, thread["url"], thread
 
+            if page:
+                return
+
 
 class FoolfuukaSearchExtractor(FoolfuukaExtractor):
     """Base extractor for search results on FoolFuuka based boards/archives"""
@@ -174,17 +184,16 @@ class FoolfuukaSearchExtractor(FoolfuukaExtractor):
     def __init__(self, match):
         FoolfuukaExtractor.__init__(self, match)
         self.params = params = {}
-        args = match.group(match.lastindex).split("/")
-        key = None
 
-        for arg in args:
+        key = None
+        for arg in self.groups[-1].split("/"):
             if key:
                 params[key] = text.unescape(arg)
                 key = None
             else:
                 key = arg
 
-        board = match.group(match.lastindex-1)
+        board = self.groups[-2]
         if board != "_":
             params["boards"] = board
 

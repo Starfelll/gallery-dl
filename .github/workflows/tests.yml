@@ -1,6 +1,7 @@
 name: tests
 
 on:
+  workflow_dispatch:
   push:
     branches:
     - master
@@ -15,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "pypy3.9"]
+        python-version: ["3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12.3", "pypy3.9"]
 
     steps:
     - uses: actions/checkout@v4
@@ -25,9 +26,11 @@ jobs:
         if [[ "$(find ./gallery_dl -type f -not -perm 644)" ]]; then exit 1; fi
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+      env:
+        PIP_TRUSTED_HOST: "pypi.python.org pypi.org files.pythonhosted.org"
 
     - name: Install dependencies
       run: |
@@ -54,7 +57,7 @@ jobs:
       run: |
         case "${{ matrix.python-version }}" in
             3.4|3.5|3.6|3.7)
-                flake8 --extend-exclude scripts/export_tests.py .
+                flake8 --extend-exclude scripts/export_tests.py,scripts/pyprint.py .
                 ;;
             *)
                 flake8 .

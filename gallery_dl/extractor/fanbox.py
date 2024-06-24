@@ -11,7 +11,8 @@ from .. import text
 from ..cache import memcache
 import re
 
-BASE_PATTERN = (
+BASE_PATTERN = r"(?:https?://)?(?:www\.)?fanbox\.cc"
+USER_PATTERN = (
     r"(?:https?://)?(?:"
     r"(?!www\.)([\w-]+)\.fanbox\.cc|"
     r"(?:www\.)?fanbox\.cc/@([\w-]+))"
@@ -112,7 +113,17 @@ class FanboxExtractor(Extractor):
             post["user"] = self._get_user_data(post["creatorId"])
         if self._meta_plan:
             plans = self._get_plan_data(post["creatorId"])
-            post["plan"] = plans[post["feeRequired"]]
+            fee = post["feeRequired"]
+            try:
+                post["plan"] = plans[fee]
+            except KeyError:
+                fees = [f for f in plans if f >= fee]
+                if fees:
+                    plan = plans[min(fees)]
+                else:
+                    plan = plans[0].copy()
+                    plan["fee"] = fee
+                post["plan"] = plans[fee] = plan
 
         return content_body, post
 
@@ -290,7 +301,7 @@ class FanboxExtractor(Extractor):
 class FanboxCreatorExtractor(FanboxExtractor):
     """Extractor for a Fanbox creator's works"""
     subcategory = "creator"
-    pattern = BASE_PATTERN + r"(?:/posts)?/?$"
+    pattern = USER_PATTERN + r"(?:/posts)?/?$"
     example = "https://USER.fanbox.cc/"
 
     def __init__(self, match):
@@ -305,7 +316,7 @@ class FanboxCreatorExtractor(FanboxExtractor):
 class FanboxPostExtractor(FanboxExtractor):
     """Extractor for media from a single Fanbox post"""
     subcategory = "post"
-    pattern = BASE_PATTERN + r"/posts/(\d+)"
+    pattern = USER_PATTERN + r"/posts/(\d+)"
     example = "https://USER.fanbox.cc/posts/12345"
 
     def __init__(self, match):
@@ -314,6 +325,28 @@ class FanboxPostExtractor(FanboxExtractor):
 
     def posts(self):
         return (self._get_post_data(self.post_id),)
+
+
+class FanboxHomeExtractor(FanboxExtractor):
+    """Extractor for your Fanbox home feed"""
+    subcategory = "home"
+    pattern = BASE_PATTERN + r"/?$"
+    example = "https://fanbox.cc/"
+
+    def posts(self):
+        url = "https://api.fanbox.cc/post.listHome?limit=10"
+        return self._pagination(url)
+
+
+class FanboxSupportingExtractor(FanboxExtractor):
+    """Extractor for your supported Fanbox users feed"""
+    subcategory = "supporting"
+    pattern = BASE_PATTERN + r"/home/supporting"
+    example = "https://fanbox.cc/home/supporting"
+
+    def posts(self):
+        url = "https://api.fanbox.cc/post.listSupporting?limit=10"
+        return self._pagination(url)
 
 
 class FanboxRedirectExtractor(Extractor):

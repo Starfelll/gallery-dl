@@ -155,7 +155,10 @@ class UgoiraPP(PostProcessor):
                 self.log.error("Unable to invoke FFmpeg (%s: %s)",
                                exc.__class__.__name__, exc)
                 pathfmt.realpath = pathfmt.temppath
-            except Exception:
+            except Exception as exc:
+                print()
+                self.log.error("%s: %s", exc.__class__.__name__, exc)
+                self.log.debug("", exc_info=True)
                 pathfmt.realpath = pathfmt.temppath
             else:
                 if self.mtime:
@@ -171,7 +174,7 @@ class UgoiraPP(PostProcessor):
     def _exec(self, args):
         self.log.debug(args)
         out = None if self.output else subprocess.DEVNULL
-        retcode = subprocess.Popen(args, stdout=out, stderr=out).wait()
+        retcode = util.Popen(args, stdout=out, stderr=out).wait()
         if retcode:
             print()
             self.log.error("Non-zero exit status when running %s (%s)",
@@ -264,8 +267,8 @@ class UgoiraPP(PostProcessor):
         append("")
 
         ffconcat = tempdir + "/ffconcat.txt"
-        with open(ffconcat, "w") as file:
-            file.write("\n".join(content))
+        with open(ffconcat, "w") as fp:
+            fp.write("\n".join(content))
         return ffconcat
 
     def _write_mkvmerge_timecodes(self, tempdir):
@@ -280,8 +283,8 @@ class UgoiraPP(PostProcessor):
         append("")
 
         timecodes = tempdir + "/timecodes.tc"
-        with open(timecodes, "w") as file:
-            file.write("\n".join(content))
+        with open(timecodes, "w") as fp:
+            fp.write("\n".join(content))
         return timecodes
 
     def calculate_framerate(self, frames):

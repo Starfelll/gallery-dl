@@ -77,6 +77,8 @@ class FlickrImageExtractor(FlickrExtractor):
         photo = self.api.photos_getInfo(self.item_id)
         if self.api.exif:
             photo.update(self.api.photos_getExif(self.item_id))
+        if self.api.contexts:
+            photo.update(self.api.photos_getAllContexts(self.item_id))
 
         if photo["media"] == "video" and self.api.videos:
             self.api._extract_video(photo)
@@ -268,6 +270,8 @@ class FlickrAPI(oauth.OAuth1API):
 
         self.exif = extractor.config("exif", False)
         self.videos = extractor.config("videos", True)
+        self.contexts = extractor.config("contexts", False)
+
         self.maxsize = extractor.config("size-max")
         if isinstance(self.maxsize, str):
             for fmt, fmtname, fmtwidth in self.FORMATS:
@@ -310,6 +314,13 @@ class FlickrAPI(oauth.OAuth1API):
         """Return photos from the given user's photostream."""
         params = {"user_id": user_id}
         return self._pagination("people.getPhotos", params)
+
+    def photos_getAllContexts(self, photo_id):
+        """Returns all visible sets and pools the photo belongs to."""
+        params = {"photo_id": photo_id}
+        data = self._call("photos.getAllContexts", params)
+        del data["stat"]
+        return data
 
     def photos_getExif(self, photo_id):
         """Retrieves a list of EXIF/TIFF/GPS tags for a given photo."""
@@ -386,7 +397,11 @@ class FlickrAPI(oauth.OAuth1API):
         params["nojsoncallback"] = "1"
         if self.api_key:
             params["api_key"] = self.api_key
-        data = self.request(self.API_URL, params=params).json()
+        response = self.request(self.API_URL, params=params)
+        try:
+            data = response.json()
+        except ValueError:
+            data = {"code": -1, "message": response.content}
         if "code" in data:
             msg = data.get("message")
             self.log.debug("Server response: %s", data)
@@ -440,6 +455,8 @@ class FlickrAPI(oauth.OAuth1API):
 
         if self.exif:
             photo.update(self.photos_getExif(photo["id"]))
+        if self.contexts:
+            photo.update(self.photos_getAllContexts(photo["id"]))
         photo["id"] = text.parse_int(photo["id"])
 
         if "owner" in photo:

@@ -19,7 +19,7 @@ class NijieExtractor(AsynchronousMixin, BaseExtractor):
     directory_fmt = ("{category}", "{user_id}")
     filename_fmt = "{image_id}_p{num}.{extension}"
     archive_fmt = "{image_id}_{num}"
-    request_interval = (1.0, 2.0)
+    request_interval = (2.0, 4.0)
 
     def __init__(self, match):
         BaseExtractor.__init__(self, match)
@@ -56,7 +56,7 @@ class NijieExtractor(AsynchronousMixin, BaseExtractor):
                 data["user_id"] = data["artist_id"]
                 data["user_name"] = data["artist_name"]
 
-            urls = list(self._extract_images(image_id, page))
+            urls = self._extract_images(image_id, page)
             data["count"] = len(urls)
 
             yield Message.Directory, data
@@ -113,11 +113,14 @@ class NijieExtractor(AsynchronousMixin, BaseExtractor):
             # multiple images
             url = "{}/view_popup.php?id={}".format(self.root, image_id)
             page = self.request(url).text
-            yield from text.extract_iter(
-                page, 'href="javascript:void(0);"><img src="', '"')
+            return [
+                text.extr(media, ' src="', '"')
+                for media in text.extract_iter(
+                    page, 'href="javascript:void(0);"><', '>')
+            ]
         else:
             pos = page.find('id="view-center"') + 1
-            yield text.extract(page, 'itemprop="image" src="', '"', pos)[0]
+            return (text.extr(page, 'itemprop="image" src="', '"', pos),)
 
     @staticmethod
     def _extract_user_name(page):

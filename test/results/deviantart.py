@@ -253,6 +253,14 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://deviantart.com/h3813067/avatar",
+    "#comment" : "default avatar (#5276)",
+    "#category": ("", "deviantart", "avatar"),
+    "#class"   : deviantart.DeviantartAvatarExtractor,
+    "#count"   : 0,
+},
+
+{
     "#url"     : "https://deviantart.com/gdldev/banner",
     "#category": ("", "deviantart", "background"),
     "#class"   : deviantart.DeviantartBackgroundExtractor,
@@ -300,7 +308,7 @@ __tests__ = (
     "target"           : dict,
     "thumbs"           : list,
     "title"            : "Banner",
-    "url"              : "https://sta.sh/0198jippkeys",
+    "url"              : "https://www.deviantart.com/stash/0198jippkeys",
     "username"         : "gdldev",
 },
 
@@ -353,12 +361,37 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.deviantart.com/stash/022c83odnaxc",
+    "#category": ("", "deviantart", "stash"),
+    "#class"   : deviantart.DeviantartStashExtractor,
+    "#pattern"     : r"https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/940f2d05-c5eb-4917-8192-7eb6a2d508c6/dcvdmbc-e506cdcf-3208-4c20-85ab-0bfa8a7bcb16.png\?token=ey.+",
+    "#count"       : 1,
+    "#sha1_content": "057eb2f2861f6c8a96876b13cca1a4b7a408c11f",
+
+    "content": {
+        "filename": "01_by_justatest235723_dcvdmbc.png",
+        "filesize": 380,
+        "width"   : 128,
+        "height"  : 128,
+        "src"     : r"re:https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/940f2d05-c5eb-4917-8192-7eb6a2d508c6/dcvdmbc-e506cdcf-3208-4c20-85ab-0bfa8a7bcb16.png\?token=ey.+",
+    },
+    "da_category"   : "Uncategorized",
+    "date"          : "dt:2018-12-26 14:49:27",
+    "deviationid"   : "A4A6AD52-8857-46EE-ABFE-86D49D4FF9D0",
+    "download_filesize": 380,
+    "extension"     : "png",
+    "filename"      : "01_by_justatest235723-dcvdmbc",
+    "index"         : 778297656,
+    "index_base36"  : "cvdmbc",
+    "published_time": 1545835767,
+    "title"         : "01",
+    "url"           : "https://www.deviantart.com/stash/022c83odnaxc",
+},
+
+{
     "#url"     : "https://sta.sh/022c83odnaxc",
     "#category": ("", "deviantart", "stash"),
     "#class"   : deviantart.DeviantartStashExtractor,
-    "#pattern"     : r"https://wixmp-[^.]+\.wixmp\.com/f/.+/.+\.png\?token=.+",
-    "#count"       : 1,
-    "#sha1_content": "057eb2f2861f6c8a96876b13cca1a4b7a408c11f",
 },
 
 {
@@ -556,7 +589,7 @@ __tests__ = (
 
     "index"       : int,
     "index_base36": r"re:^[0-9a-z]+$",
-    "url"         : r"re:^https://sta.sh",
+    "url"         : r"re:^https://www.deviantart.com/stash/\w+",
 },
 
 {
@@ -643,6 +676,37 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.deviantart.com/shimoda7/art/For-the-sake-10073852",
+    "#category": ("", "deviantart", "deviation"),
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#options" : {"metadata": "submission,camera,stats"},
+
+    "can_post_comment": False,
+    "description"     : str,
+    "is_watching"     : False,
+    "license"         : "No License",
+    "stats": {
+        "comments"       : int,
+        "downloads"      : int,
+        "downloads_today": int,
+        "favourites"     : int,
+        "views"          : int,
+        "views_today"    : int,
+    },
+    "submission": {
+        "category"      : "traditional/drawings/other",
+        "creation_time" : "2004-08-25T02:44:08-0700",
+        "file_size"     : "133 KB",
+        "resolution"    : "710x510",
+        "submitted_with": {
+            "app": "Unknown App",
+            "url": ""
+        },
+    },
+    "tags": [],
+},
+
+{
     "#url"     : "https://www.deviantart.com/zzz/art/zzz-1234567890",
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
@@ -670,6 +734,20 @@ __tests__ = (
     },
 
     "comments": "len:20",
+},
+
+{
+    "#url"     : "https://www.deviantart.com/justatest235723/art/Blue-811519058",
+    "#comment" : "comment avatars (#4995)",
+    "#category": ("", "deviantart", "deviation"),
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#options" : {
+        "original"        : False,
+        "comments-avatars": True,
+    },
+    "#range"   : "5-",
+    "#pattern" : r"^https://www\.deviantart\.com/justatest235723/avatar/$",
+    "#count"   : 16,
 },
 
 {
@@ -732,8 +810,7 @@ __tests__ = (
     "#comment" : "journal",
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
-    "#pattern" : """text:<!DOCTYPE html>
-""",
+    "#pattern" : """text:<!DOCTYPE html>\n""",
     "#sha1_url": "d34b2c9f873423e665a1b8ced20fcb75951694a3",
 },
 
@@ -742,9 +819,32 @@ __tests__ = (
     "#comment" : "journal-like post with isJournal == False (#419)",
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
-    "#pattern" : """text:<!DOCTYPE html>
-""",
+    "#pattern" : """text:<!DOCTYPE html>\n""",
     "#sha1_url": "e2e0044bd255304412179b6118536dbd9bb3bb0e",
+},
+
+{
+    "#url"     : "https://www.deviantart.com/neotypical/art/985226590",
+    "#comment" : "subscription locked (#4567)",
+    "#category": ("", "deviantart", "deviation"),
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#count"   : 0,
+},
+
+{
+    "#url"     : "https://www.deviantart.com/colibriworkshop/art/Crimson-Pandaren-Phoenix-World-of-Warcraft-630984457",
+    "#comment" : "'png' option (#4846)",
+    "#category": ("", "deviantart", "deviation"),
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#options"     : {"quality": "png", "intermediary": False},
+    "#sha1_content": "75fb92a820b154c061f7e1f9935260577b2365ec",
+    "#pattern"     : r"https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com"
+                     r"/f/d86d1faa-37a8-4bcb-b421-53331885d763/dafo6q1-5c4c999a-019e-4845-8c29-6fab2d05c8e8\.jpg"
+                     r"/v1/fill/w_1024,h_1297,q_75,strp"
+                     r"/crimson_pandaren_phoenix_world_of_warcraft_by_colibriworkshop_dafo6q1-fullview\.png"
+                     r"\?token=ey.+",
+
+    "extension": "png",
 },
 
 {

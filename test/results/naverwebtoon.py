@@ -62,6 +62,24 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://comic.naver.com/bestChallenge/detail?titleId=620732&no=334",
+    "#comment" : "empty tags (#5120)",
+    "#category": ("", "naverwebtoon", "episode"),
+    "#class"   : naverwebtoon.NaverwebtoonEpisodeExtractor,
+    "#count"   : 9,
+
+    "artist"  : [],
+    "author"  : ["안트로anthrokim"],
+    "comic"   : "백일몽화원",
+    "count"   : 9,
+    "episode" : "334",
+    "num"     : range(1, 9),
+    "tags"    : [],
+    "title"   : "321화... 성(省)",
+    "title_id": "620732",
+},
+
+{
     "#url"     : "https://comic.naver.com/bestChallenge/detail.nhn?titleId=771467&no=3",
     "#category": ("", "naverwebtoon", "episode"),
     "#class"   : naverwebtoon.NaverwebtoonEpisodeExtractor,
@@ -78,11 +96,20 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://comic.naver.com/webtoon/list?titleId=765124",
+    "#comment" : "/webtoon/ path for 'challenge' comic (#5123)",
+    "#category": ("", "naverwebtoon", "comic"),
+    "#class"   : naverwebtoon.NaverwebtoonComicExtractor,
+    "#range"   : "1",
+    "#urls"    : "https://comic.naver.com/challenge/detail?titleId=765124&no=1",
+},
+
+{
     "#url"     : "https://comic.naver.com/challenge/list?titleId=765124",
     "#category": ("", "naverwebtoon", "comic"),
     "#class"   : naverwebtoon.NaverwebtoonComicExtractor,
     "#pattern" : naverwebtoon.NaverwebtoonEpisodeExtractor.pattern,
-    "#count"   : 25,
+    "#count"   : 24,
 },
 
 {

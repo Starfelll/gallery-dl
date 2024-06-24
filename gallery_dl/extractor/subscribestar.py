@@ -43,6 +43,8 @@ class SubscribestarExtractor(Extractor):
                 item.update(data)
                 item["num"] = num
                 text.nameext_from_url(item.get("name") or item["url"], item)
+                if item["url"][0] == "/":
+                    item["url"] = self.root + item["url"]
                 yield Message.Url, item["url"], item
 
     def posts(self):
@@ -175,7 +177,7 @@ class SubscribestarPostExtractor(SubscribestarExtractor):
             "author_id"  : text.parse_int(extr('data-user-id="', '"')),
             "author_nick": text.unescape(extr('alt="', '"')),
             "date"       : self._parse_datetime(extr(
-                'class="section-subtitle">', '<')),
+                '<span class="star_link-types">', '<')),
             "content"    : (extr(
                 '<div class="post-content', '<div class="post-uploads')
                 .partition(">")[2]),

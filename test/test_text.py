@@ -121,12 +121,14 @@ class TestText(unittest.TestCase):
 
     def test_root_from_url(self, f=text.root_from_url):
         result = "https://example.org"
+        self.assertEqual(f("https://example.org")     , result)
         self.assertEqual(f("https://example.org/")    , result)
         self.assertEqual(f("https://example.org/path"), result)
         self.assertEqual(f("example.org/")            , result)
         self.assertEqual(f("example.org/path/")       , result)
 
         result = "http://example.org"
+        self.assertEqual(f("http://example.org")      , result)
         self.assertEqual(f("http://example.org/")     , result)
         self.assertEqual(f("http://example.org/path/"), result)
         self.assertEqual(f("example.org/", "http://") , result)
@@ -457,5 +459,5 @@ class TestText(unittest.TestCase):
         self.assertEqual(f("1970.01.01"), "1970.01.01")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

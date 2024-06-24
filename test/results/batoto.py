@@ -43,6 +43,23 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://mto.to/chapter/2584460",
+    "#comment" : "'-' in manga title (#5200)",
+    "#category": ("", "batoto", "chapter"),
+    "#class"   : batoto.BatotoChapterExtractor,
+
+    "chapter"   : 9,
+    "chapter_id": 2584460,
+    "chapter_minor": "",
+    "count"     : 18,
+    "date"      : "dt:2023-11-26 11:01:12",
+    "manga"     : "Isekai Teni shitara Aiken ga Saikyou ni narimashita - Silver Fenrir to Ore ga Isekai Kurashi wo Hajimetara (Official)",
+    "manga_id"  : 126793,
+    "title"     : "",
+    "volume"    : 0
+},
+
+{
     "#url"     : "https://bato.to/title/86408/1681030",
     "#category": ("", "batoto", "chapter"),
     "#class"   : batoto.BatotoChapterExtractor,
@@ -64,7 +81,7 @@ __tests__ = (
     "chapter"      : int,
     "chapter_minor": str,
     "date"         : "type:datetime",
-    "manga"        : "Futsutsuka na Akujo de wa Gozaimasu ga - Suuguu Chouso Torikae Den (Official)",
+    "manga"        : "Futsutsuka na Akujo de wa Gozaimasu ga - Suuguu Chouso Torikae Den",
     "manga_id"     : 113742,
 },
 
@@ -85,7 +102,7 @@ __tests__ = (
     "#class"   : batoto.BatotoMangaExtractor,
     "#count"   : ">= 29",
 
-    "manga": "The Grand Duke’s Fox Princess ⎝⎝MGCHAN⎠⎠",
+    "manga": "Grand Duke Dan Putri Rubah [cont by LUNABY]",
 },
 
 {

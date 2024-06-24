@@ -46,7 +46,7 @@ class NaverwebtoonEpisodeExtractor(NaverwebtoonBase, GalleryExtractor):
             "episode" : self.episode,
             "comic"   : extr('titleName: "', '"'),
             "tags"    : [t.strip() for t in text.extract_iter(
-                extr("tagList: [", "}],"), '"tagName":"', '"')],
+                extr("tagList: [", "],"), '"tagName":"', '"')],
             "title"   : extr('"subtitle":"', '"'),
             "author"  : [a.strip() for a in text.extract_iter(
                 extr('"writers":[', ']'), '"name":"', '"')],
@@ -79,9 +79,6 @@ class NaverwebtoonComicExtractor(NaverwebtoonBase, Extractor):
         self.sort = query.get("sort", "ASC")
 
     def items(self):
-        base = "{}/{}/detail?titleId={}&no=".format(
-            self.root, self.path, self.title_id)
-
         url = self.root + "/api/article/list"
         headers = {
             "Accept": "application/json, text/plain, */*",
@@ -94,6 +91,10 @@ class NaverwebtoonComicExtractor(NaverwebtoonBase, Extractor):
 
         while True:
             data = self.request(url, headers=headers, params=params).json()
+
+            path = data["webtoonLevelCode"].lower().replace("_c", "C", 1)
+            base = "{}/{}/detail?titleId={}&no=".format(
+                self.root, path, data["titleId"])
 
             for article in data["articleList"]:
                 article["_extractor"] = NaverwebtoonEpisodeExtractor

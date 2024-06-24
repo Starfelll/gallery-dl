@@ -337,6 +337,15 @@ Description
       filename extension (``file.1.ext``, ``file.2.ext``, etc.)
 
 
+extractor.*.skip-filter
+-----------------------
+Type
+    ``string``
+Description
+    Python expression controlling which skipped files to count towards
+    ``"abort"`` / ``"terminate"`` / ``"exit"``.
+
+
 extractor.*.sleep
 -----------------
 Type
@@ -358,12 +367,39 @@ Description
     i.e. before starting a new extractor.
 
 
+extractor.*.sleep-429
+---------------------
+Type
+    |Duration|_
+Default
+    ``60``
+Description
+    Number of seconds to sleep when receiving a `429 Too Many Requests`
+    response before `retrying <extractor.*.retries_>`__ the request.
+
+
 extractor.*.sleep-request
 -------------------------
 Type
     |Duration|_
 Default
-    ``0``
+    * ``"0.5-1.5"``
+        ``[Danbooru]``, ``[E621]``, ``[foolfuuka]:search``, ``itaku``,
+        ``newgrounds``, ``[philomena]``, ``pixiv:novel``, ``plurk``,
+        ``poipiku`` , ``pornpics``, ``soundgasm``, ``urlgalleries``,
+        ``vk``, ``zerochan``
+    * ``"1.0-2.0"``
+        ``flickr``, ``weibo``, ``[wikimedia]``
+    * ``"2.0-4.0"``
+        ``behance``, ``imagefap``, ``[Nijie]``
+    * ``"3.0-6.0"``
+        ``exhentai``, ``idolcomplex``, ``[reactor]``, ``readcomiconline``
+    * ``"6.0-6.1"``
+        ``twibooru``
+    * ``"6.0-12.0"``
+        ``instagram``
+    * ``0``
+        otherwise
 Description
     Minimal time interval in seconds between each HTTP request
     during data extraction.
@@ -382,14 +418,20 @@ Description
     Specifying username and password is required for
 
     * ``nijie``
+    * ``horne``
 
     and optional for
 
     * ``aibooru`` (*)
     * ``aryion``
     * ``atfbooru`` (*)
+    * ``bluesky``
+    * ``booruvar`` (*)
+    * ``coomerparty``
     * ``danbooru`` (*)
+    * ``deviantart``
     * ``e621`` (*)
+    * ``e6ai`` (*)
     * ``e926`` (*)
     * ``exhentai``
     * ``idolcomplex``
@@ -400,7 +442,6 @@ Description
     * ``mangoxo``
     * ``pillowfort``
     * ``sankaku``
-    * ``seisoparty``
     * ``subscribestar``
     * ``tapas``
     * ``tsumino``
@@ -416,8 +457,19 @@ Description
     the API key found in your user profile, not the actual account password.
 
     Note: Leave the ``password`` value empty or undefined
-    to get prompted for a passeword when performing a login
+    to be prompted for a passeword when performing a login
     (see `getpass() <https://docs.python.org/3/library/getpass.html#getpass.getpass>`__).
+
+
+extractor.*.input
+-----------------
+Type
+    ``bool``
+Default
+    ``true`` if `stdin` is attached to a terminal ,
+    ``false`` otherwise
+Description
+    Allow prompting the user for interactive input.
 
 
 extractor.*.netrc
@@ -556,8 +608,8 @@ extractor.*.browser
 Type
     ``string``
 Default
-    * ``"firefox"`` for ``patreon``, ``mangapark``, and ``mangasee``
-    * ``null`` everywhere else
+    * ``"firefox"``: ``artstation``, ``mangasee``, ``patreon``, ``pixiv:series``, ``twitter``
+    * ``null``: otherwise
 Example
     * ``"chrome:macos"``
 Description
@@ -622,7 +674,7 @@ Example
 
 Description
     List of TLS/SSL cipher suites in
-    `OpenSSL cipher list format <https://www.openssl.org/docs/manmaster/man1/openssl-ciphers.html>`__
+    `OpenSSL cipher list format <https://www.openssl.org/docs/manmaster/man1/openssl-ciphers.html#CIPHER-LIST-FORMAT>`__
     to be passed to
     `ssl.SSLContext.set_ciphers() <https://docs.python.org/3/library/ssl.html#ssl.SSLContext.set_ciphers>`__
 
@@ -632,8 +684,8 @@ extractor.*.tls12
 Type
     ``bool``
 Default
-    * ``true``
-    * ``false`` for ``patreon``, ``pixiv:series``
+    * ``false``: ``artstation``, ``patreon``, ``pixiv:series``
+    * ``true``: otherwise
 Description
     Allow selecting TLS 1.2 cipher suites.
 
@@ -649,6 +701,17 @@ Example
     ``{"type": "Pixel Art", "type_id": 123}``
 Description
     Additional name-value pairs to be added to each metadata dictionary.
+
+
+extractor.*.keywords-eval
+-------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Evaluate each `keywords <extractor.*.keywords_>`__ ``string`` value
+    as a `format string`_.
 
 
 extractor.*.keywords-default
@@ -686,7 +749,7 @@ Type
     ``string``
 Description
     Insert a reference to the current
-    `PathFormat <https://github.com/mikf/gallery-dl/blob/v1.24.2/gallery_dl/path.py#L27>`__
+    `PathFormat <https://github.com/mikf/gallery-dl/blob/v1.27.0/gallery_dl/path.py#L27>`__
     data structure into metadata dictionaries as the given name.
 
     For example, setting this option to ``"gdl_path"`` would make it possible
@@ -701,7 +764,7 @@ Type
     ``string``
 Description
     Insert a reference to the current
-    `Extractor <https://github.com/mikf/gallery-dl/blob/v1.26.2/gallery_dl/extractor/common.py#L26>`__
+    `Extractor <https://github.com/mikf/gallery-dl/blob/v1.27.0/gallery_dl/extractor/common.py#L28>`__
     object into metadata dictionaries as the given name.
 
 
@@ -812,6 +875,22 @@ Description
     An alternative `format string`_ to build archive IDs with.
 
 
+extractor.*.archive-mode
+------------------------
+Type
+    ``string``
+Default
+    ``"file"``
+Description
+    Controls when to write `archive IDs <extractor.*.archive-format_>`__
+    to the archive database.
+
+    * ``"file"``: Write IDs immediately
+      after completing or skipping a file download.
+    * ``"memory"``: Keep IDs in memory
+      and only write them after successful job completion.
+
+
 extractor.*.archive-prefix
 --------------------------
 Type
@@ -831,8 +910,67 @@ Example
 Description
     A list of SQLite ``PRAGMA`` statements to run during archive initialization.
 
-    See `<https://www.sqlite.org/pragma.html>`__
+    See `<https://www.sqlite.org/pragma.html#toc>`__
     for available ``PRAGMA`` statements and further details.
+
+
+extractor.*.actions
+-------------------
+Type
+    * ``object`` (`pattern` -> `action`)
+    * ``list`` of ``lists`` with 2 ``strings`` as elements
+Example
+    .. code:: json
+
+        {
+            "error"                   : "status |= 1",
+            "warning:(?i)unable to .+": "exit 127",
+            "info:Logging in as .+"   : "level = debug"
+        }
+
+    .. code:: json
+
+        [
+            ["error"                   , "status |= 1"  ],
+            ["warning:(?i)unable to .+", "exit 127"     ],
+            ["info:Logging in as .+"   , "level = debug"]
+        ]
+
+Description
+    Perform an ``action`` when logging a message matched by ``pattern``.
+
+    ``pattern`` is parsed as severity level (``debug``, ``info``, ``warning``, ``error``, or integer value)
+    followed by an optional `Python Regular Expression <https://docs.python.org/3/library/re.html#regular-expression-syntax>`__
+    separated by a colon ``:``.
+    Using ``*`` as `level` or leaving it empty
+    matches logging messages of all levels
+    (e.g. ``*:<re>`` or ``:<re>``).
+
+    ``action`` is parsed as action type
+    followed by (optional) arguments.
+
+    Supported Action Types:
+
+    ``status``:
+        | Modify job exit status.
+        | Expected syntax is ``<operator> <value>`` (e.g. ``= 100``).
+
+        Supported operators are
+        ``=`` (assignment),
+        ``&`` (bitwise AND),
+        ``|`` (bitwise OR),
+        ``^`` (bitwise XOR).
+    ``level``:
+        | Modify severity level of the current logging message.
+        | Can be one of ``debug``, ``info``, ``warning``, ``error`` or an integer value.
+    ``print``
+        Write argument to stdout.
+    ``restart``:
+        Restart the current extractor run.
+    ``wait``:
+        Stop execution until Enter is pressed.
+    ``exit``:
+        Exit the program with the given argument as exit status.
 
 
 extractor.*.postprocessors
@@ -1123,6 +1261,26 @@ Description
     Limit the number of posts/projects to download.
 
 
+extractor.artstation.previews
+-----------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Download video previews.
+
+
+extractor.artstation.videos
+---------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Download video clips.
+
+
 extractor.artstation.search.pro-first
 -------------------------------------
 Type
@@ -1182,6 +1340,73 @@ Default
     ``true``
 Description
     Download embedded videos hosted on https://www.blogger.com/
+
+
+extractor.bluesky.include
+-------------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``"media"``
+Example
+    * ``"avatar,background,posts"``
+    * ``["avatar", "background", "posts"]``
+Description
+    A (comma-separated) list of subcategories to include
+    when processing a user profile.
+
+    Possible values are
+    ``"avatar"``,
+    ``"background"``,
+    ``"posts"``,
+    ``"replies"``,
+    ``"media"``,
+    ``"likes"``,
+
+    It is possible to use ``"all"`` instead of listing all values separately.
+
+
+extractor.bluesky.metadata
+--------------------------
+Type
+    * ``bool``
+    * ``string``
+    * ``list`` of ``strings``
+Default
+    ``false``
+Example
+    * ``"facets,user"``
+    * ``["facets", "user"]``
+Description
+    Extract additional metadata.
+
+    * ``facets``: ``hashtags``, ``mentions``, and ``uris``
+    * ``user``: detailed ``user`` metadata for the user referenced in the input URL
+      (See `app.bsky.actor.getProfile <https://www.docs.bsky.app/docs/api/app-bsky-actor-get-profile>`__).
+
+
+
+extractor.bluesky.post.depth
+----------------------------
+Type
+    ``integer``
+Default
+    ``0``
+Description
+    Sets the maximum depth of returned reply posts.
+
+    (See `depth` parameter of `app.bsky.feed.getPostThread <https://www.docs.bsky.app/docs/api/app-bsky-feed-get-post-thread>`__)
+
+
+extractor.bluesky.reposts
+-------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Process reposts.
 
 
 extractor.cyberdrop.domain
@@ -1288,6 +1513,19 @@ Description
     See `Filters <https://derpibooru.org/filters>`_ for details.
 
 
+extractor.derpibooru.svg
+------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Download SVG versions of images when available.
+
+    Try to download the ``view_url`` version of these posts
+    when this option is disabled.
+
+
 extractor.deviantart.auto-watch
 -------------------------------
 Type
@@ -1318,6 +1556,18 @@ Default
     ``false``
 Description
     Extract ``comments`` metadata.
+
+
+extractor.deviantart.comments-avatars
+-------------------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Download the avatar of each commenting user.
+
+    Note: Enabling this option also enables deviantart.comments_.
 
 
 extractor.deviantart.extra
@@ -1469,12 +1719,33 @@ Description
 extractor.deviantart.metadata
 -----------------------------
 Type
-    ``bool``
+    * ``bool``
+    * ``string``
+    * ``list`` of ``strings``
 Default
     ``false``
+Example
+    * ``"stats,submission"``
+    * ``["camera", "stats", "submission"]``
 Description
-    Request extended metadata for deviation objects to additionally provide
-    ``description``, ``tags``, ``license`` and ``is_watching`` fields.
+    Extract additional metadata for deviation objects.
+
+    Provides
+    ``description``, ``tags``, ``license``, and ``is_watching``
+    fields when enabled.
+
+    It is possible to request extended metadata by specifying a list of
+
+    * ``camera``     : EXIF information (if available)
+    * ``stats``      : deviation statistics
+    * ``submission`` : submission information
+    * ``collection`` : favourited folder information (requires a `refresh token <extractor.deviantart.refresh-token_>`__)
+    * ``gallery``    : gallery folder information (requires a `refresh token <extractor.deviantart.refresh-token_>`__)
+
+    Set this option to ``"all"`` to request all extended metadata categories.
+
+    See `/deviation/metadata <https://www.deviantart.com/developers/http/v1/20210526/deviation_metadata/7824fc14d6fba6acbacca1cf38c24158>`__
+    for official documentation.
 
 
 extractor.deviantart.original
@@ -1521,14 +1792,15 @@ Description
 extractor.deviantart.quality
 ----------------------------
 Type
-    ``integer``
+    * ``integer``
+    * ``string``
 Default
     ``100``
 Description
-    JPEG quality level of newer images for which
+    JPEG quality level of images for which
     an original file download is not available.
 
-    Note: Only has an effect when `deviantart.jwt <extractor.deviantart.jwt_>`__ is disabled.
+    Set this to ``"png"`` to download a PNG version of these images instead.
 
 
 extractor.deviantart.refresh-token
@@ -1581,7 +1853,7 @@ Type
 Default
     ``false``
 Example
-    * ``notes,pools``
+    * ``"notes,pools"``
     * ``["notes", "pools"]``
 Description
     Extract additional metadata (notes, pool metadata) if available.
@@ -1719,8 +1991,8 @@ Description
 
     * ``true``: Extract embed URLs and download them if supported
       (videos are not downloaded).
-    * ``"ytdl"``: Like ``true``, but let `youtube-dl`_ handle video
-      extraction and download for YouTube, Vimeo and SoundCloud embeds.
+    * ``"ytdl"``: Like ``true``, but let |ytdl| handle video
+      extraction and download for YouTube, Vimeo, and SoundCloud embeds.
     * ``false``: Ignore embeds.
 
 
@@ -1750,6 +2022,20 @@ Description
     from `linking your Flickr account to gallery-dl <OAuth_>`__.
 
 
+extractor.flickr.contexts
+-------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    For each photo, return the albums and pools it belongs to
+    as ``set`` and ``pool`` metadata.
+
+    Note: This requires 1 additional API call per photo.
+    See `flickr.photos.getAllContexts <https://www.flickr.com/services/api/flickr.photos.getAllContexts.html>`__ for details.
+
+
 extractor.flickr.exif
 ---------------------
 Type
@@ -1757,9 +2043,11 @@ Type
 Default
     ``false``
 Description
-    Fetch `exif` and `camera` metadata for each photo.
+    For each photo, return its EXIF/TIFF/GPS tags
+    as ``exif`` and ``camera`` metadata.
 
     Note: This requires 1 additional API call per photo.
+    See `flickr.photos.getExif <https://www.flickr.com/services/api/flickr.photos.getExif.html>`__ for details.
 
 
 extractor.flickr.metadata
@@ -1779,7 +2067,7 @@ Description
 
     It is possible to specify a custom list of metadata includes.
     See `the extras parameter <https://www.flickr.com/services/api/flickr.people.getPhotos.html>`__
-    in `Flickr API docs <https://www.flickr.com/services/api/>`__
+    in `Flickr's API docs <https://www.flickr.com/services/api/>`__
     for possible field names.
 
 
@@ -1877,6 +2165,20 @@ Description
     Values from the API Access Credentials section found at the bottom of your
     `Account Options <https://gelbooru.com/index.php?page=account&s=options>`__
     page.
+
+
+extractor.gelbooru.favorite.order-posts
+---------------------------------------
+Type
+    ``string``
+Default
+    ``"desc"``
+Description
+    Controls the order in which favorited posts are returned.
+
+    * ``"asc"``: Ascending favorite date order (oldest first)
+    * ``"desc"``: Descending favorite date order (newest first)
+    * ``"reverse"``: Same as ``"asc"``
 
 
 extractor.generic.enabled
@@ -2165,6 +2467,16 @@ Description
     Extract a user's direct messages as ``dms`` metadata.
 
 
+extractor.kemonoparty.announcements
+-----------------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Extract a user's announcements as ``announcements`` metadata.
+
+
 extractor.kemonoparty.favorites
 -------------------------------
 Type
@@ -2222,6 +2534,22 @@ Description
     Set this to ``"unique"`` to filter out duplicate revisions.
 
     Note: This requires 1 additional HTTP request per post.
+
+
+extractor.kemonoparty.order-revisions
+-------------------------------------
+Type
+    ``string``
+Default
+    ``"desc"``
+Description
+    Controls the order in which
+    `revisions <extractor.kemonoparty.revisions_>`__
+    are returned.
+
+    * ``"asc"``: Ascending order (oldest first)
+    * ``"desc"``: Descending order (newest first)
+    * ``"reverse"``: Same as ``"asc"``
 
 
 extractor.khinsider.format
@@ -2348,6 +2676,16 @@ Description
     user IDs.
 
 
+extractor.[mastodon].cards
+--------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Fetch media from cards.
+
+
 extractor.[mastodon].reblogs
 ----------------------------
 Type
@@ -2431,16 +2769,22 @@ Description
 extractor.newgrounds.format
 ---------------------------
 Type
-    ``string``
+    * ``string``
+    * ``list`` of ``string``
 Default
     ``"original"``
 Example
-    ``"720p"``
+    * ``"720p"``
+    * ``["mp4", "mov", "1080p", "720p"]``
 Description
     Selects the preferred format for video downloads.
 
     If the selected format is not available,
     the next smaller one gets chosen.
+
+    If this is a ``list``, try each given
+    filename extension in original resolution or recoded format
+    until an available format is found.
 
 
 extractor.newgrounds.include
@@ -2511,7 +2855,7 @@ Description
     Control video download behavior.
 
     * ``true``: Download videos
-    * ``"ytdl"``: Download videos using `youtube-dl`_
+    * ``"ytdl"``: Download videos using |ytdl|
     * ``false``: Skip video Tweets
 
 
@@ -2588,16 +2932,6 @@ Description
 
     Available types are
     ``postfile``, ``images``, ``image_large``, ``attachments``, and ``content``.
-
-
-extractor.photobucket.subalbums
--------------------------------
-Type
-    ``bool``
-Default
-    ``true``
-Description
-    Download subalbums.
 
 
 extractor.pillowfort.external
@@ -2707,14 +3041,24 @@ Description
     `gppt <https://github.com/eggplants/get-pixivpy-token>`__.
 
 
-extractor.pixiv.embeds
-----------------------
+extractor.pixiv.novel.covers
+----------------------------
 Type
     ``bool``
 Default
     ``false``
 Description
-    Download images embedded in novels.
+    Download cover images.
+
+
+extractor.pixiv.novel.embeds
+----------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Download embedded images.
 
 
 extractor.pixiv.novel.full-series
@@ -2971,11 +3315,11 @@ Default
 Description
     Control video download behavior.
 
-    * ``true``: Download videos and use `youtube-dl`_ to handle
+    * ``true``: Download videos and use |ytdl| to handle
       HLS and DASH manifests
-    * ``"ytdl"``: Download videos and let `youtube-dl`_ handle all of
+    * ``"ytdl"``: Download videos and let |ytdl| handle all of
       video extraction and download
-    * ``"dash"``: Extract DASH manifest URLs and use `youtube-dl`_
+    * ``"dash"``: Extract DASH manifest URLs and use |ytdl|
       to download and merge them. (*)
     * ``false``: Ignore videos
 
@@ -3164,7 +3508,7 @@ Examples
     * ``["jpeg", "webp"]``
 Description
     Only include assets that are in the specified file types. ``all`` can be
-    used to specifiy all file types. Valid values are:
+    used to specify all file types. Valid values are:
 
     * Grids: ``png``, ``jpeg``, ``jpg``, ``webp``
     * Heroes: ``png``, ``jpeg``, ``jpg``, ``webp``
@@ -3204,7 +3548,7 @@ Examples
     * ``["fr", "it"]``
 Description
     Only include assets that are in the specified languages. ``all`` can be
-    used to specifiy all languages. Valid values are `ISO 639-1 <https://en.wikipedia.org/wiki/ISO_639-1>`__
+    used to specify all languages. Valid values are `ISO 639-1 <https://en.wikipedia.org/wiki/ISO_639-1>`__
     language codes.
 
 
@@ -3448,6 +3792,19 @@ Description
     See `Filters <https://twibooru.org/filters>`__ for details.
 
 
+extractor.twibooru.svg
+----------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    Download SVG versions of images when available.
+
+    Try to download the ``view_url`` version of these posts
+    when this option is disabled.
+
+
 extractor.twitter.ads
 ---------------------
 Type
@@ -3470,7 +3827,8 @@ Description
 
     * ``false``: Ignore cards
     * ``true``: Download image content from supported cards
-    * ``"ytdl"``: Additionally download video content from unsupported cards using `youtube-dl`_
+    * ``"ytdl"``: Additionally download video content from unsupported cards
+      using |ytdl|
 
 
 extractor.twitter.cards-blacklist
@@ -3536,6 +3894,17 @@ Description
     for each Tweet in said timeline.
 
     Note: This requires at least 1 additional API call per initial Tweet.
+
+
+extractor.twitter.unavailable
+-----------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Try to download media marked as ``Unavailable``,
+    e.g. ``Geoblocked`` videos.
 
 
 extractor.twitter.include
@@ -3647,6 +4016,33 @@ Description
 
     * ``"abort"``: Raise an error and stop extraction
     * ``"wait"``: Wait until rate limit reset
+    * ``"wait:N"``: Wait for ``N`` seconds
+
+
+extractor.twitter.relogin
+-------------------------
+Type
+    ``bool``
+Default
+    ``true``
+Description
+    When receiving a "Could not authenticate you" error while logged in with
+    `username & passeword <extractor.*.username & .password_>`__,
+    refresh the current login session and
+    try to continue from where it left off.
+
+
+extractor.twitter.locked
+------------------------
+Type
+    ``string``
+Default
+    ``"abort"``
+Description
+    Selects how to handle "account is temporarily locked" errors.
+
+    * ``"abort"``: Raise an error and stop extraction
+    * ``"wait"``: Wait until the account is unlocked and retry
 
 
 extractor.twitter.replies
@@ -3732,6 +4128,18 @@ Description
     Ignore previously seen Tweets.
 
 
+extractor.twitter.username-alt
+------------------------------
+Type
+    ``string``
+Description
+    Alternate Identifier (username, email, phone number)
+    when `logging in <extractor.*.username & .password_>`__.
+
+    When not specified and asked for by Twitter,
+    this identifier will need to entered in an interactive prompt.
+
+
 extractor.twitter.users
 -----------------------
 Type
@@ -3770,7 +4178,7 @@ Description
     Control video download behavior.
 
     * ``true``: Download videos
-    * ``"ytdl"``: Download videos using `youtube-dl`_
+    * ``"ytdl"``: Download videos using |ytdl|
     * ``false``: Skip video Tweets
 
 
@@ -3785,6 +4193,31 @@ Description
 
     Available formats are
     ``"raw"``, ``"full"``, ``"regular"``, ``"small"``, and ``"thumb"``.
+
+
+extractor.vipergirls.domain
+---------------------------
+Type
+    ``string``
+Default
+    ``"vipergirls.to"``
+Description
+    Specifies the domain used by ``vipergirls`` extractors.
+
+    For example ``"viper.click"`` if the main domain is blocked or to bypass Cloudflare,
+
+
+extractor.vipergirls.like
+-------------------------
+Type
+    ``bool``
+Default
+    ``false``
+Description
+    Automatically `like` posts after downloading their images.
+
+    Note: Requires `login <extractor.*.username & .password_>`__
+    or `cookies <extractor.*.cookies_>`__
 
 
 extractor.vsco.videos
@@ -3867,6 +4300,19 @@ Description
     Note: This requires 1 additional HTTP request per submission.
 
 
+extractor.weibo.gifs
+--------------------
+Type
+    * ``bool``
+    * ``string``
+Default
+    ``true``
+Description
+    Download ``gif`` files.
+
+    Set this to ``"video"`` to download GIFs as video files.
+
+
 extractor.weibo.include
 -----------------------
 Type
@@ -3904,7 +4350,7 @@ extractor.weibo.retweets
 Type
     ``bool``
 Default
-    ``true``
+    ``false``
 Description
     Fetch media from retweeted posts.
 
@@ -3922,6 +4368,33 @@ Description
     Download video files.
 
 
+extractor.ytdl.cmdline-args
+---------------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Example
+    * ``"--quiet --write-sub --merge-output-format mkv"``
+    * ``["--quiet", "--write-sub", "--merge-output-format", "mkv"]``
+Description
+    Additional ``ytdl`` options specified as command-line arguments.
+
+    See
+    `yt-dlp options <https://github.com/yt-dlp/yt-dlp#usage-and-options>`__
+    /
+    `youtube-dl options <https://github.com/ytdl-org/youtube-dl#options>`__
+
+
+extractor.ytdl.config-file
+--------------------------
+Type
+    |Path|_
+Example
+    ``"~/.config/yt-dlp/config"``
+Description
+    Location of a |ytdl| configuration file to load options from.
+
+
 extractor.ytdl.enabled
 ----------------------
 Type
@@ -3929,7 +4402,7 @@ Type
 Default
     ``false``
 Description
-    Match **all** URLs, even ones without a ``ytdl:`` prefix.
+    Process URLs otherwise unsupported by gallery-dl with |ytdl|.
 
 
 extractor.ytdl.format
@@ -3937,23 +4410,29 @@ extractor.ytdl.format
 Type
     ``string``
 Default
-    youtube-dl's default, currently ``"bestvideo+bestaudio/best"``
+    | Default of the ``ytdl`` `module <extractor.ytdl.module_>`__ used.
+    | (``"bestvideo*+bestaudio/best"`` for ``yt_dlp``,
+       ``"bestvideo+bestaudio/best"`` for ``youtube_dl``)
 Description
-    Video `format selection
-    <https://github.com/ytdl-org/youtube-dl#format-selection>`__
-    directly passed to youtube-dl.
+    ``ytdl`` format selection string.
+
+    See
+    `yt-dlp format selection <https://github.com/yt-dlp/yt-dlp#format-selection>`__
+    /
+    `youtube-dl format selection <https://github.com/ytdl-org/youtube-dl#format-selection>`__
 
 
 extractor.ytdl.generic
 ----------------------
 Type
-    ``bool``
+    * ``bool``
+    * ``string``
 Default
     ``true``
 Description
-    Controls the use of youtube-dl's generic extractor.
+    Enables the use of |ytdl's| ``generic`` extractor.
 
-    Set this option to ``"force"`` for the same effect as youtube-dl's
+    Set this option to ``"force"`` for the same effect as
     ``--force-generic-extractor``.
 
 
@@ -3964,8 +4443,8 @@ Type
 Default
     ``true``
 Description
-    Route youtube-dl's output through gallery-dl's logging system.
-    Otherwise youtube-dl will write its output directly to stdout/stderr.
+    Route |ytdl's| output through gallery-dl's logging system.
+    Otherwise it will be written directly to stdout/stderr.
 
     Note: Set ``quiet`` and ``no_warnings`` in
     `extractor.ytdl.raw-options`_ to ``true`` to suppress all output.
@@ -3978,7 +4457,7 @@ Type
 Default
     ``null``
 Description
-    Name of the youtube-dl Python module to import.
+    Name of the ``ytdl`` Python module to import.
 
     Setting this to ``null`` will try to import ``"yt_dlp"``
     followed by ``"youtube_dl"`` as fallback.
@@ -4000,30 +4479,10 @@ Example
 Description
     Additional options passed directly to the ``YoutubeDL`` constructor.
 
-    All available options can be found in `youtube-dl's docstrings
-    <https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L138-L318>`__.
-
-
-extractor.ytdl.cmdline-args
----------------------------
-Type
-    * ``string``
-    * ``list`` of ``strings``
-Example
-    * ``"--quiet --write-sub --merge-output-format mkv"``
-    * ``["--quiet", "--write-sub", "--merge-output-format", "mkv"]``
-Description
-    Additional options specified as youtube-dl command-line arguments.
-
-
-extractor.ytdl.config-file
---------------------------
-Type
-    |Path|_
-Example
-    ``"~/.config/youtube-dl/config"``
-Description
-    Location of a youtube-dl configuration file to load options from.
+    Available options can be found in
+    `yt-dlp's docstrings <https://github.com/yt-dlp/yt-dlp/blob/2024.05.27/yt_dlp/YoutubeDL.py#L200>`__
+    /
+    `youtube-dl's docstrings <https://github.com/ytdl-org/youtube-dl/blob/0153b387e57e0bb8e580f1869f85596d2767fb0d/youtube_dl/YoutubeDL.py#L157>`__
 
 
 extractor.zerochan.metadata
@@ -4036,6 +4495,21 @@ Description
     Extract additional metadata (date, md5, tags, ...)
 
     Note: This requires 1-2 additional HTTP requests per post.
+
+
+extractor.zerochan.pagination
+-----------------------------
+Type
+    ``string``
+Default
+    ``"api"``
+Description
+    Controls how to paginate over tag search results.
+
+    * ``"api"``: Use the `JSON API <https://www.zerochan.net/api>`__
+      (no ``extension`` metadata)
+    * ``"html"``: Parse HTML pages
+      (limited to 100 pages * 24 posts)
 
 
 extractor.[booru].tags
@@ -4337,16 +4811,48 @@ Description
     instead of downloading a potentially broken file.
 
 
+downloader.ytdl.cmdline-args
+----------------------------
+Type
+    * ``string``
+    * ``list`` of ``strings``
+Example
+    * ``"--quiet --write-sub --merge-output-format mkv"``
+    * ``["--quiet", "--write-sub", "--merge-output-format", "mkv"]``
+Description
+    Additional ``ytdl`` options specified as command-line arguments.
+
+    See
+    `yt-dlp options <https://github.com/yt-dlp/yt-dlp#usage-and-options>`__
+    /
+    `youtube-dl options <https://github.com/ytdl-org/youtube-dl#options>`__
+
+
+downloader.ytdl.config-file
+---------------------------
+Type
+    |Path|_
+Example
+    ``"~/.config/yt-dlp/config"``
+Description
+    Location of a |ytdl| configuration file to load options from.
+
+
 downloader.ytdl.format
 ----------------------
 Type
     ``string``
 Default
-    youtube-dl's default, currently ``"bestvideo+bestaudio/best"``
+    | Default of the ``ytdl`` `module <downloader.ytdl.module_>`__ used.
+    | (``"bestvideo*+bestaudio/best"`` for ``yt_dlp``,
+       ``"bestvideo+bestaudio/best"`` for ``youtube_dl``)
 Description
-    Video `format selection
-    <https://github.com/ytdl-org/youtube-dl#format-selection>`__
-    directly passed to youtube-dl.
+    ``ytdl`` format selection string.
+
+    See
+    `yt-dlp format selection <https://github.com/yt-dlp/yt-dlp#format-selection>`__
+    /
+    `youtube-dl format selection <https://github.com/ytdl-org/youtube-dl#format-selection>`__
 
 
 downloader.ytdl.forward-cookies
@@ -4356,7 +4862,7 @@ Type
 Default
     ``false``
 Description
-    Forward cookies to youtube-dl.
+    Forward gallery-dl's cookies to |ytdl|.
 
 
 downloader.ytdl.logging
@@ -4366,8 +4872,8 @@ Type
 Default
     ``true``
 Description
-    Route youtube-dl's output through gallery-dl's logging system.
-    Otherwise youtube-dl will write its output directly to stdout/stderr.
+    Route |ytdl's| output through gallery-dl's logging system.
+    Otherwise it will be written directly to stdout/stderr.
 
     Note: Set ``quiet`` and ``no_warnings`` in
     `downloader.ytdl.raw-options`_ to ``true`` to suppress all output.
@@ -4380,10 +4886,10 @@ Type
 Default
     ``null``
 Description
-    Name of the youtube-dl Python module to import.
+    Name of the ``ytdl`` Python module to import.
 
-    Setting this to ``null`` will first try to import ``"yt_dlp"``
-    and use ``"youtube_dl"`` as fallback.
+    Setting this to ``null`` will try to import ``"yt_dlp"``
+    followed by ``"youtube_dl"`` as fallback.
 
 
 downloader.ytdl.outtmpl
@@ -4393,16 +4899,23 @@ Type
 Default
     ``null``
 Description
-    The `Output Template <https://github.com/ytdl-org/youtube-dl#output-template>`__
-    used to generate filenames for files downloaded with youtube-dl.
+    The `Output Template`
+    used to generate filenames for files downloaded with ``ytdl``.
+
+    See
+    `yt-dlp output template <https://github.com/yt-dlp/yt-dlp#output-template>`__
+    /
+    `youtube-dl output template <https://github.com/ytdl-org/youtube-dl#output-template>`__.
 
     Special values:
 
     * ``null``: generate filenames with `extractor.*.filename`_
-    * ``"default"``: use youtube-dl's default, currently ``"%(title)s-%(id)s.%(ext)s"``
+    * ``"default"``: use |ytdl's| default, currently
+      ``"%(title)s [%(id)s].%(ext)s"`` for yt-dlp_ /
+      ``"%(title)s-%(id)s.%(ext)s"`` for youtube-dl_
 
     Note: An output template other than ``null`` might
-    cause unexpected results in combination with other options
+    cause unexpected results in combination with certain options
     (e.g. ``"skip": "enumerate"``)
 
 
@@ -4422,30 +4935,10 @@ Example
 Description
     Additional options passed directly to the ``YoutubeDL`` constructor.
 
-    All available options can be found in `youtube-dl's docstrings
-    <https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/YoutubeDL.py#L138-L318>`__.
-
-
-downloader.ytdl.cmdline-args
-----------------------------
-Type
-    * ``string``
-    * ``list`` of ``strings``
-Example
-    * ``"--quiet --write-sub --merge-output-format mkv"``
-    * ``["--quiet", "--write-sub", "--merge-output-format", "mkv"]``
-Description
-    Additional options specified as youtube-dl command-line arguments.
-
-
-downloader.ytdl.config-file
----------------------------
-Type
-    |Path|_
-Example
-    ``"~/.config/youtube-dl/config"``
-Description
-    Location of a youtube-dl configuration file to load options from.
+    Available options can be found in
+    `yt-dlp's docstrings <https://github.com/yt-dlp/yt-dlp/blob/2024.05.27/yt_dlp/YoutubeDL.py#L200>`__
+    /
+    `youtube-dl's docstrings <https://github.com/ytdl-org/youtube-dl/blob/0153b387e57e0bb8e580f1869f85596d2767fb0d/youtube_dl/YoutubeDL.py#L157>`__
 
 
 
@@ -4564,10 +5057,33 @@ output.colors
 Type
     ``object`` (`key` -> `ANSI color`)
 Default
-    ``{"success": "1;32", "skip": "2"}``
+    .. code:: json
+
+        {
+            "success": "1;32",
+            "skip"   : "2",
+            "debug"  : "0;37",
+            "info"   : "1;37",
+            "warning": "1;33",
+            "error"  : "1;31"
+        }
+
 Description
-    Controls the `ANSI colors <https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797#colors--graphics-mode>`__
-    used with |mode: color|__ for successfully downloaded or skipped files.
+    Controls the
+    `ANSI colors <https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797#colors--graphics-mode>`__
+    used for various outputs.
+
+    Output for |mode: color|__
+
+    * ``success``: successfully downloaded files
+    * ``skip``: skipped files
+
+    Logging Messages:
+
+    * ``debug``: debug logging messages
+    * ``info``: info logging messages
+    * ``warning``: warning logging messages
+    * ``error``: error logging messages
 
 .. __: `output.mode`_
 
@@ -4577,7 +5093,7 @@ output.ansi
 Type
     ``bool``
 Default
-    ``false``
+    ``true``
 Description
     | On Windows, enable ANSI escape sequences and colored output
     | by setting the ``ENABLE_VIRTUAL_TERMINAL_PROCESSING`` flag for stdout and stderr.
@@ -4839,11 +5355,12 @@ Description
 exec.event
 ----------
 Type
-    ``string``
+    * ``string``
+    * ``list`` of ``strings``
 Default
     ``"after"``
 Description
-    The event for which `exec.command`_ is run.
+    The event(s) for which `exec.command`_ is run.
 
     See `metadata.event`_ for a list of available events.
 
@@ -4926,13 +5443,17 @@ Description
 metadata.event
 --------------
 Type
-    ``string``
+    * ``string``
+    * ``list`` of ``strings``
 Default
     ``"file"``
+Example
+    * ``"prepare,file,after"``
+    * ``["prepare-after", "skip"]``
 Description
-    The event for which metadata gets written to a file.
+    The event(s) for which metadata gets written to a file.
 
-    The available events are:
+    Available events are:
 
     ``init``
         After post processor initialization
@@ -5148,11 +5669,14 @@ Description
 mtime.event
 -----------
 Type
-    ``string``
+    * ``string``
+    * ``list`` of ``strings``
 Default
     ``"file"``
 Description
-    See `metadata.event`_
+    The event(s) for which `mtime.key`_ or `mtime.value`_ get evaluated.
+
+    See `metadata.event`_ for a list of available events.
 
 
 mtime.key
@@ -5204,11 +5728,12 @@ Description
 python.event
 ------------
 Type
-    ``string``
+    * ``string``
+    * ``list`` of ``strings``
 Default
     ``"file"``
 Description
-    The event for which `python.function`_ gets called.
+    The event(s) for which `python.function`_ gets called.
 
     See `metadata.event`_ for a list of available events.
 
@@ -5223,7 +5748,7 @@ Example
 Description
     The Python function to call.
 
-    This function gets specified as ``<module>:<function name>``
+    This function is specified as ``<module>:<function name>``
     and gets called with the current metadata dict as argument.
 
     ``module`` is either an importable Python module name
@@ -5249,7 +5774,7 @@ Default
 Example
     ``["-c:v", "libvpx-vp9", "-an", "-b:v", "2M"]``
 Description
-    Additional FFmpeg command-line arguments.
+    Additional |ffmpeg| command-line arguments.
 
 
 ugoira.ffmpeg-demuxer
@@ -5259,7 +5784,9 @@ Type
 Default
     ``auto``
 Description
-    FFmpeg demuxer to read and process input files with. Possible values are
+    |ffmpeg| demuxer to read and process input files with.
+
+    Possible values are
 
     * "`concat <https://ffmpeg.org/ffmpeg-formats.html#concat-1>`_" (inaccurate frame timecodes for non-uniform frame delays)
     * "`image2 <https://ffmpeg.org/ffmpeg-formats.html#image2-1>`_" (accurate timecodes, requires nanosecond file timestamps, i.e. no Windows or macOS)
@@ -5297,12 +5824,12 @@ Type
 Default
     ``"error"``
 Description
-    Controls FFmpeg output.
+    Controls |ffmpeg| output.
 
-    * ``true``: Enable FFmpeg output
-    * ``false``: Disable all FFmpeg output
+    * ``true``: Enable |ffmpeg| output
+    * ``false``: Disable all |ffmpeg| output
     * any ``string``: Pass ``-hide_banner`` and ``-loglevel``
-      with this value as argument to FFmpeg
+      with this value as argument to |ffmpeg|
 
 
 ugoira.ffmpeg-twopass
@@ -5322,7 +5849,7 @@ Type
 Default
     ``"auto"``
 Description
-    Controls the frame rate argument (``-r``) for FFmpeg
+    Controls the frame rate argument (``-r``) for |ffmpeg|
 
     * ``"auto"``: Automatically assign a fitting frame rate
       based on delays between frames.
@@ -5357,7 +5884,7 @@ Description
 
     This option, when ``libx264/5`` is used, automatically
     adds ``["-vf", "crop=iw-mod(iw\\,2):ih-mod(ih\\,2)"]``
-    to the list of FFmpeg command-line arguments
+    to the list of |ffmpeg| command-line arguments
     to reduce an odd width/height by 1 pixel and make them even.
 
 
@@ -5455,7 +5982,7 @@ Type
     ``list`` of ``strings``
 Default
     The ``modules`` list in
-    `extractor/__init__.py <../gallery_dl/extractor/__init__.py#L12>`__
+    `extractor/__init__.py <https://github.com/mikf/gallery-dl/blob/master/gallery_dl/extractor/__init__.py#L12>`__
 Example
     ``["reddit", "danbooru", "mangadex"]``
 Description
@@ -5478,7 +6005,7 @@ Description
     i.e. classes with a ``pattern`` attribute.
 
     Note: ``null`` references internal extractors defined in
-    `extractor/__init__.py <../gallery_dl/extractor/__init__.py#L12>`__
+    `extractor/__init__.py <https://github.com/mikf/gallery-dl/blob/master/gallery_dl/extractor/__init__.py#L12>`__
     or by `extractor.modules`_.
 
 
@@ -5495,7 +6022,8 @@ Description
       `importable <https://docs.python.org/3/reference/import.html>`__
       Python module,
     | whose namespace,
-      in addition to the ``GLOBALS`` dict in `util.py <../gallery_dl/util.py>`__,
+      in addition to the ``GLOBALS`` dict in
+      `util.py <https://github.com/mikf/gallery-dl/blob/v1.27.0/gallery_dl/util.py#L566-L578>`__,
       gets used as |globals parameter|__ for compiled Python expressions.
 
 .. |globals parameter| replace:: ``globals`` parameter
@@ -5625,7 +6153,7 @@ How To
       * choose a name
       * select "installed app"
       * set ``http://localhost:6414/`` as "redirect uri"
-      * solve the "I'm not a rebot" reCATCHA if needed
+      * solve the "I'm not a robot" reCAPTCHA if needed
       * click "create app"
 
     * copy the client id (third line, under your application's name and
@@ -5773,14 +6301,14 @@ Description
 
     * format
         * General format string for logging messages
-          or a dictionary with format strings for each loglevel.
+          or an ``object`` with format strings for each loglevel.
 
           In addition to the default
           `LogRecord attributes <https://docs.python.org/3/library/logging.html#logrecord-attributes>`__,
           it is also possible to access the current
-          `extractor <https://github.com/mikf/gallery-dl/blob/v1.24.2/gallery_dl/extractor/common.py#L26>`__,
-          `job <https://github.com/mikf/gallery-dl/blob/v1.24.2/gallery_dl/job.py#L21>`__,
-          `path <https://github.com/mikf/gallery-dl/blob/v1.24.2/gallery_dl/path.py#L27>`__,
+          `extractor <https://github.com/mikf/gallery-dl/blob/v1.27.0/gallery_dl/extractor/common.py#L28>`__,
+          `job <https://github.com/mikf/gallery-dl/blob/v1.27.0/gallery_dl/job.py#L33>`__,
+          `path <https://github.com/mikf/gallery-dl/blob/v1.27.0/gallery_dl/path.py#L27>`__,
           and `keywords` objects and their attributes, for example
           ``"{extractor.url}"``, ``"{path.filename}"``, ``"{keywords.title}"``
         * Default: ``"[{name}][{levelname}] {message}"``
@@ -5853,11 +6381,16 @@ Description
     ``python``
         Call Python functions
     ``ugoira``
-        Convert Pixiv Ugoira to WebM using `FFmpeg <https://www.ffmpeg.org/>`__
+        Convert Pixiv Ugoira to WebM using |ffmpeg|
     ``zip``
         Store files in a ZIP archive
+        |ytdl|
 
 
+
+.. |ytdl| replace:: `yt-dlp`_/`youtube-dl`_
+.. |ytdl's| replace:: yt-dlp's/youtube-dl's
+.. |ffmpeg| replace:: FFmpeg_
 
 .. |.netrc| replace:: ``.netrc``
 .. |requests.request()| replace:: ``requests.request()``
@@ -5882,6 +6415,7 @@ Description
 .. _base-directory: `extractor.*.base-directory`_
 .. _date-format: `extractor.*.date-format`_
 .. _deviantart.metadata: `extractor.deviantart.metadata`_
+.. _deviantart.comments: `extractor.deviantart.comments`_
 .. _postprocessors: `extractor.*.postprocessors`_
 .. _download archive: `extractor.*.archive`_
 
@@ -5899,6 +6433,8 @@ Description
 .. _format string:      formatting.md
 .. _format strings:     formatting.md
 .. _youtube-dl:         https://github.com/ytdl-org/youtube-dl
+.. _yt-dlp:             https://github.com/yt-dlp/yt-dlp
+.. _FFmpeg:             https://www.ffmpeg.org/
 .. _requests.request(): https://requests.readthedocs.io/en/master/api/#requests.request
 .. _timeout:            https://requests.readthedocs.io/en/master/user/advanced/#timeouts
 .. _verify:             https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
