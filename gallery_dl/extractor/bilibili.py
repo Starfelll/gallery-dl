@@ -4,102 +4,113 @@
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 
-"""Extractors for https://bilibili.com/"""
-
-import json
+"""Extractors for https://www.bilibili.com/"""
 
 from .common import Extractor, Message
-from .. import text, exception
-
-
-BASE_PATTERN = (r"(?:https?://)?(?:www\.)?(?:bilibili)\.com/")
+from .. import text, util, exception
 
 
 class BilibiliExtractor(Extractor):
     """Base class for bilibili extractors"""
     category = "bilibili"
     root = "https://www.bilibili.com"
-    directory_fmt = ("{category}", "{user[id]}")
-    filename_fmt = "{id}_{num}.{extension}"
-    archive_fmt = "{id}_{num}"
-    cookiedomain = ".bilibili.com"
+    request_interval = (3.0, 6.0)
 
-    def __init__(self, match):
-        Extractor.__init__(self, match)
+    def _init(self):
         self.api = BilibiliAPI(self)
-        self.session.headers.update({
-            "Cookie": self.config('token', "")
-        })
-        pass
+
+
+class BilibiliUserArticlesExtractor(BilibiliExtractor):
+    """Extractor for a bilibili user's articles"""
+    subcategory = "user-articles"
+    pattern = r"(?:https?://)?space\.bilibili\.com/(\d+)/article"
+    example = "https://space.bilibili.com/12345/article"
 
     def items(self):
-        posts = self.posts()
-        metadata = self.metadata()
-
-        for post in posts:
-            card = json.loads(post['card'])
-            post['card'] = card
-            pictures = card['item']['pictures']
-            data = {
-                'num': 0,
-                'raw': post,
-                'id': post['desc']['dynamic_id'],
-                'user': {
-                    'id': post['desc']['uid']
-                }
-            }
-            data.update(metadata)
-
-            yield Message.Directory, data
-            for i in range(card['item']['pictures_count']):
-                url = pictures[i]['img_src']
-                yield Message.Url, url, text.nameext_from_url(url, data)
-                data['num'] = data['num'] + 1
-
-    def posts(self):
-        """Return an iterable containing all relevant 'posts' objects"""
-
-    def metadata(self):
-        """Collect metadata for extractor job"""
-        return {}
+        for article in self.api.user_articles(self.groups[0]):
+            article["_extractor"] = BilibiliArticleExtractor
+            url = "{}/opus/{}".format(self.root, article["opus_id"])
+            yield Message.Queue, url, article
 
 
-class BilibiliDynamicExtractor(BilibiliExtractor):
-    """Base class for bilibili dynamic extractors"""
-    subcategory = "dynamic"
-    pattern = BASE_PATTERN + r"opus/([^/?#]+)"
+class BilibiliArticleExtractor(BilibiliExtractor):
+    """Extractor for a bilibili article"""
+    subcategory = "article"
+    pattern = (r"(?:https?://)?"
+               r"(?:t\.bilibili\.com|(?:www\.)?bilibili.com/opus)/(\d+)")
+    example = "https://www.bilibili.com/opus/12345"
+    directory_fmt = ("{category}", "{username}")
+    filename_fmt = "{id}_{num}.{extension}"
+    archive_fmt = "{id}_{num}"
 
-    def __init__(self, match):
-        BilibiliExtractor.__init__(self, match)
-        self.dynamic_id = match.group(1)
+    def items(self):
+        article = self.api.article(self.groups[0])
 
-    def posts(self):
-        result = self.api.dynamic_detail(self.dynamic_id)['card']
-        desc_type = result['desc']['type']
-        if desc_type == 2:
-            return (result,)
-        else:
-            self.log.error("Unsupported dynamic type: " + str(desc_type))
+        # Flatten modules list
+        modules = {}
+        for module in article["detail"]["modules"]:
+            del module['module_type']
+            modules.update(module)
+        article["detail"]["modules"] = modules
+
+        article["username"] = modules["module_author"]["name"]
+
+        pics = []
+        for paragraph in modules['module_content']['paragraphs']:
+            if "pic" not in paragraph:
+                continue
+
+            try:
+                pics.extend(paragraph["pic"]["pics"])
+            except Exception:
+                pass
+
+        article["count"] = len(pics)
+        yield Message.Directory, article
+        for article["num"], pic in enumerate(pics, 1):
+            url = pic["url"]
+            article.update(pic)
+            yield Message.Url, url, text.nameext_from_url(url, article)
 
 
-class BilibiliAPI:
-
+class BilibiliAPI():
     def __init__(self, extractor):
         self.extractor = extractor
 
-    def _call(self, endpoint, params=None):
-        url = "https://api.vc.bilibili.com" + endpoint
+    def _call(self, endpoint, params):
+        url = "https://api.bilibili.com/x/polymer/web-dynamic/v1" + endpoint
+        data = self.extractor.request(url, params=params).json()
 
-        response = self.extractor.request(url, params=params).json()
+        if data["code"] != 0:
+            self.extractor.log.debug("Server response: %s", data)
+            raise exception.StopExtraction("API request failed")
 
-        if response['code'] == 0:
-            data = response["data"]
-            return data
-        else:
-            raise exception.StopExtraction("API request failed: %s",
-                                           response['message'])
+        return data
 
-    def dynamic_detail(self, dynamic_id):
-        return self._call("/dynamic_svr/v1/dynamic_svr/get_dynamic_detail", {
-            "dynamic_id": dynamic_id,
-        })
+    def user_articles(self, user_id):
+        endpoint = "/opus/feed/space"
+        params = {"host_mid": user_id}
+
+        while True:
+            data = self._call(endpoint, params)
+
+            for item in data["data"]["items"]:
+                params["offset"] = item["opus_id"]
+                yield item
+
+            if not data["data"]["has_more"]:
+                break
+
+    def article(self, article_id):
+        url = "https://www.bilibili.com/opus/" + article_id
+
+        while True:
+            page = self.extractor.request(url).text
+            try:
+                return util.json_loads(text.extr(
+                    page, "window.__INITIAL_STATE__=", "};") + "}")
+            except Exception:
+                if "window._riskdata_" not in page:
+                    raise exception.StopExtraction(
+                        "%s: Unable to extract INITIAL_STATE data", article_id)
+            self.extractor.wait(seconds=300)

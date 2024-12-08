@@ -25,10 +25,12 @@ Dependencies
 Optional
 --------
 
+- yt-dlp_ or youtube-dl_: HLS/DASH video downloads, ``ytdl`` integration
 - FFmpeg_: Pixiv Ugoira conversion
-- yt-dlp_ or youtube-dl_: Video downloads
+- mkvmerge_: Accurate Ugoira frame timecodes
 - PySocks_: SOCKS proxy support
 - brotli_ or brotlicffi_: Brotli compression support
+- zstandard_: Zstandard compression support
 - PyYAML_: YAML configuration file support
 - toml_: TOML configuration file support for Python<3.11
 - SecretStorage_: GNOME keyring passwords for ``--cookies-from-browser``
@@ -53,7 +55,9 @@ pip_ as well:
 
 .. code:: bash
 
-    python3 -m pip install -U -I --no-deps --no-cache-dir https://github.com/mikf/gallery-dl/archive/master.tar.gz
+    python3 -m pip install -U --force-reinstall --no-deps https://github.com/mikf/gallery-dl/archive/master.tar.gz
+
+Omit :code:`--no-deps` if Requests_ hasn't been installed yet.
 
 Note: Windows users should use :code:`py -3` instead of :code:`python3`.
 
@@ -72,9 +76,9 @@ Standalone Executable
 Prebuilt executable files with a Python interpreter and
 required Python packages included are available for
 
-- `Windows <https://github.com/mikf/gallery-dl/releases/download/v1.27.1/gallery-dl.exe>`__
+- `Windows <https://github.com/mikf/gallery-dl/releases/download/v1.28.1/gallery-dl.exe>`__
   (Requires `Microsoft Visual C++ Redistributable Package (x86) <https://aka.ms/vs/17/release/vc_redist.x86.exe>`__)
-- `Linux   <https://github.com/mikf/gallery-dl/releases/download/v1.27.1/gallery-dl.bin>`__
+- `Linux   <https://github.com/mikf/gallery-dl/releases/download/v1.28.1/gallery-dl.bin>`__
 
 
 Nightly Builds
@@ -417,11 +421,13 @@ To authenticate with a ``mastodon`` instance, run *gallery-dl* with
 .. _pip:        https://pip.pypa.io/en/stable/
 .. _Requests:   https://requests.readthedocs.io/en/master/
 .. _FFmpeg:     https://www.ffmpeg.org/
+.. _mkvmerge:   https://www.matroska.org/downloads/mkvtoolnix.html
 .. _yt-dlp:     https://github.com/yt-dlp/yt-dlp
 .. _youtube-dl: https://ytdl-org.github.io/youtube-dl/
 .. _PySocks:    https://pypi.org/project/PySocks/
 .. _brotli:     https://github.com/google/brotli
 .. _brotlicffi: https://github.com/python-hyper/brotlicffi
+.. _zstandard:  https://github.com/indygreg/python-zstandard
 .. _PyYAML:     https://pyyaml.org/
 .. _toml:       https://pypi.org/project/toml/
 .. _SecretStorage: https://pypi.org/project/SecretStorage/

@@ -40,20 +40,29 @@
     -G, --resolve-urls          Print URLs instead of downloading; resolve
                                 intermediary URLs
     -j, --dump-json             Print JSON information
+    -J, --resolve-json          Print JSON information; resolve intermediary
+                                URLs
     -s, --simulate              Simulate data extraction; do not download
                                 anything
     -E, --extractor-info        Print extractor defaults and settings
     -K, --list-keywords         Print a list of available keywords and example
                                 values for the given URLs
     -e, --error-file FILE       Add input URLs which returned an error to FILE
+    -N, --print [EVENT:]FORMAT  Write FORMAT during EVENT (default 'prepare') to
+                                standard output. Examples: 'id' or
+                                'post:{md5[:8]}'
+    --print-to-file [EVENT:]FORMAT FILE
+                                Append FORMAT during EVENT to FILE
     --list-modules              Print a list of available extractor modules
-    --list-extractors           Print a list of extractor classes with
+    --list-extractors CATEGORIES
+                                Print a list of extractor classes with
                                 description, (sub)category and example URL
     --write-log FILE            Write logging output to FILE
     --write-unsupported FILE    Write URLs, which get emitted by other
                                 extractors but cannot be handled, to FILE
     --write-pages               Write downloaded intermediary pages to files in
                                 the current directory to debug problems
+    --print-traffic             Display sent and read HTTP traffic
     --no-colors                 Do not emit ANSI color codes in output
 
 ## Networking Options:
@@ -62,6 +71,8 @@
     --http-timeout SECONDS      Timeout for HTTP connections (default: 30.0)
     --proxy URL                 Use the specified proxy
     --source-address IP         Client-side IP address to bind to
+    -4, --force-ipv4            Make all connections via IPv4
+    -6, --force-ipv6            Make all connections via IPv6
     --no-check-certificate      Disable HTTPS certificate validation
 
 ## Downloader Options:
@@ -103,7 +114,7 @@
                                 optional domain prefixed with '/', keyring name
                                 prefixed with '+', profile prefixed with ':',
                                 and container prefixed with '::' ('none' for no
-                                container)
+                                container (default), 'all' for all containers)
 
 ## Selection Options:
     -A, --abort N               Stop current extractor run after N consecutive
@@ -143,9 +154,13 @@
     --mtime NAME                Set file modification times according to
                                 metadata selected by NAME. Examples: 'date' or
                                 'status[date]'
-    --ugoira FORMAT             Convert Pixiv Ugoira to FORMAT using FFmpeg.
+    --rename FORMAT             Rename previously downloaded files from FORMAT
+                                to the current filename format
+    --rename-to FORMAT          Rename previously downloaded files from the
+                                current filename format to FORMAT
+    --ugoira FMT                Convert Pixiv Ugoira to FMT using FFmpeg.
                                 Supported formats are 'webm', 'mp4', 'gif',
-                                'vp8', 'vp9', 'vp9-lossless', 'copy'.
+                                'vp8', 'vp9', 'vp9-lossless', 'copy', 'zip'.
     --exec CMD                  Execute CMD for each downloaded file. Supported
                                 replacement fields are {} or {_path},
                                 {_directory}, {_filename}. Example: --exec

@@ -20,7 +20,13 @@ import collections
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from gallery_dl import \
     extractor, util, job, config, exception, formatter  # noqa E402
-from test import results  # noqa E402
+
+
+RESULTS = os.environ.get("GDL_TEST_RESULTS")
+if RESULTS:
+    results = util.import_file(RESULTS)
+else:
+    from test import results
 
 
 # temporary issues, etc.
@@ -37,7 +43,8 @@ CONFIG = {
     },
 }
 
-AUTH = {
+
+AUTH_REQUIRED = {
     "pixiv",
     "nijie",
     "horne",
@@ -48,7 +55,7 @@ AUTH = {
     "twitter",
 }
 
-AUTH_CONFIG = (
+AUTH_KEYS = (
     "username",
     "cookies",
     "api-key",
@@ -85,39 +92,39 @@ class TestExtractorResults(unittest.TestCase):
             self.assertGreaterEqual(value, range.start, msg=msg)
 
     def _run_test(self, result):
+        base, cat, sub = result_categories(result)
         result.pop("#comment", None)
-        only_matching = (len(result) <= 3)
+        result.pop("#category", None)
+        auth = result.pop("#auth", None)
 
-        auth = result.get("#auth")
+        extr_url = extractor.find(result["#url"])
+        self.assertTrue(extr_url, "extractor by URL/find")
+        extr_cls = extr = result["#class"].from_url(result["#url"])
+        self.assertTrue(extr_url, "extractor by cls.from_url()")
+        self.assertIs(extr_url.__class__, extr_cls.__class__)
+
+        if len(result) <= 2:
+            return  # only matching
+
         if auth is None:
-            auth = (result["#category"][1] in AUTH)
+            auth = (cat in AUTH_REQUIRED)
         elif not auth:
-            for key in AUTH_CONFIG:
+            # auth explicitly disabled
+            for key in AUTH_KEYS:
                 config.set((), key, None)
 
-        if auth:
-            extr = result["#class"].from_url(result["#url"])
-            if not any(extr.config(key) for key in AUTH_CONFIG):
-                self._skipped.append((result["#url"], "no auth"))
-                only_matching = True
+        if auth and not any(extr.config(key) for key in AUTH_KEYS):
+            return self._skipped.append((result["#url"], "no auth"))
 
-        if only_matching:
-            content = False
-        else:
-            if "#options" in result:
-                for key, value in result["#options"].items():
-                    key = key.split(".")
-                    config.set(key[:-1], key[-1], value)
-            if "#range" in result:
-                config.set((), "image-range"  , result["#range"])
-                config.set((), "chapter-range", result["#range"])
-            content = ("#sha1_content" in result)
+        if "#options" in result:
+            for key, value in result["#options"].items():
+                key = key.split(".")
+                config.set(key[:-1], key[-1], value)
+        if "#range" in result:
+            config.set((), "image-range"  , result["#range"])
+            config.set((), "chapter-range", result["#range"])
 
-        tjob = ResultJob(result["#url"], content=content)
-        self.assertEqual(result["#class"], tjob.extractor.__class__, "#class")
-
-        if only_matching:
-            return
+        tjob = ResultJob(extr, content=("#sha1_content" in result))
 
         if "#exception" in result:
             with self.assertRaises(result["#exception"], msg="#exception"):
@@ -203,6 +210,7 @@ class TestExtractorResults(unittest.TestCase):
         if "#urls" in result:
             expected = result["#urls"]
             if isinstance(expected, str):
+                self.assertTrue(tjob.url_list, msg="#urls")
                 self.assertEqual(tjob.url_list[0], expected, msg="#urls")
             else:
                 self.assertSequenceEqual(tjob.url_list, expected, msg="#urls")
@@ -228,6 +236,8 @@ class TestExtractorResults(unittest.TestCase):
                 self.assertIsInstance(value, test, msg=path)
             elif isinstance(test, range):
                 self.assertRange(value, test, msg=path)
+            elif isinstance(test, set):
+                self.assertIn(value, test, msg=path)
             elif isinstance(test, list):
                 subtest = False
                 for idx, item in enumerate(test):
@@ -279,6 +289,8 @@ class ResultJob(job.DownloadJob):
             "".join(self.extractor.directory_fmt)).format_map
         self.format_filename = TestFormatter(
             self.extractor.filename_fmt).format_map
+        self.format_archive = TestFormatter(
+            self.extractor.archive_fmt).format_map
 
     def run(self):
         self._init()
@@ -316,7 +328,7 @@ class ResultJob(job.DownloadJob):
             json.dumps(kwdict, sort_keys=True, default=str).encode())
 
     def _update_archive(self, kwdict):
-        archive_id = self.extractor.archive_fmt.format_map(kwdict)
+        archive_id = self.format_archive(kwdict)
         self.archive_list.append(archive_id)
         self.archive_hash.update(archive_id.encode())
 
@@ -346,7 +358,7 @@ class TestPathfmt():
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, exc_type, exc_value, traceback):
         pass
 
     def open(self, mode):
@@ -409,6 +421,15 @@ def load_test_config():
             path, exc.__class__.__name__, exc))
 
 
+def result_categories(result):
+    categories = result.get("#category")
+    if categories:
+        return categories
+
+    cls = result["#class"]
+    return cls.basecategory, cls.category, cls.subcategory
+
+
 def generate_tests():
     """Dynamically generate extractor unittests"""
     def _generate_method(result):
@@ -435,7 +456,7 @@ def generate_tests():
         if category.startswith("+"):
             basecategory = category[1:].lower()
             tests = [t for t in results.all()
-                     if t["#category"][0].lower() == basecategory]
+                     if result_categories(t)[0].lower() == basecategory]
         else:
             tests = results.category(category)
 
@@ -448,14 +469,16 @@ def generate_tests():
                 tests = [t for t in tests
                          if "#comment" in t and com in t["#comment"].lower()]
             else:
-                tests = [t for t in tests if t["#category"][-1] == subcategory]
+                tests = [t for t in tests
+                         if result_categories(t)[-1] == subcategory]
     else:
         tests = results.all()
 
     # add 'test_...' methods
     enum = collections.defaultdict(int)
     for result in tests:
-        name = "{1}_{2}".format(*result["#category"])
+        base, cat, sub = result_categories(result)
+        name = "{}_{}".format(cat, sub)
         enum[name] += 1
 
         method = _generate_method(result)

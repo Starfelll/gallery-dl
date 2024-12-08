@@ -48,7 +48,7 @@ __tests__ = (
 
     "allows_comments" : bool,
     "author"          : {
-        "type"    : "regular",
+        "type"    : "premium",
         "usericon": str,
         "userid"  : "9AE51FC7-0278-806C-3FFF-F4961ABF9E2B",
         "username": "shimoda7",
@@ -61,7 +61,6 @@ __tests__ = (
         "transparency": bool,
         "width"       : int,
     },
-    "da_category"     : str,
     "date"            : datetime.datetime,
     "deviationid"     : str,
     "?download_filesize": int,
@@ -210,7 +209,7 @@ __tests__ = (
     "#sha1_content": "abf2cc79b842315f2e54bfdd93bf794a0f612b6f",
 
     "author"         : {
-        "type"    : "regular",
+        "type"    : "premium",
         "usericon": "https://a.deviantart.net/avatars/s/h/shimoda7.jpg?4",
         "userid"  : "9AE51FC7-0278-806C-3FFF-F4961ABF9E2B",
         "username": "shimoda7",
@@ -283,7 +282,6 @@ __tests__ = (
         "transparency": False,
         "width"       : 6400
     },
-    "da_category"      : "Uncategorized",
     "date"             : "dt:2024-01-02 21:16:06",
     "deviationid"      : "8C8D6B28-766A-DE21-7F7D-CE055C3BD50A",
     "download_filesize": 84510,
@@ -375,7 +373,6 @@ __tests__ = (
         "height"  : 128,
         "src"     : r"re:https://wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/940f2d05-c5eb-4917-8192-7eb6a2d508c6/dcvdmbc-e506cdcf-3208-4c20-85ab-0bfa8a7bcb16.png\?token=ey.+",
     },
-    "da_category"   : "Uncategorized",
     "date"          : "dt:2018-12-26 14:49:27",
     "deviationid"   : "A4A6AD52-8857-46EE-ABFE-86D49D4FF9D0",
     "download_filesize": 380,
@@ -502,7 +499,7 @@ __tests__ = (
     "#url"     : "https://www.deviantart.com/angrywhitewanker/posts/journals/",
     "#category": ("", "deviantart", "journal"),
     "#class"   : deviantart.DeviantartJournalExtractor,
-    "#sha1_url": "38db2a0d3a587a7e0f9dba7ff7d274610ebefe44",
+    "#sha1_url": "48aeed5631763d96f5391d2177ea72d9fdbee4e5",
 },
 
 {
@@ -617,30 +614,6 @@ __tests__ = (
 },
 
 {
-    "#url"     : "https://www.deviantart.com/?order=popular-all-time",
-    "#category": ("", "deviantart", "popular"),
-    "#class"   : deviantart.DeviantartPopularExtractor,
-    "#options" : {"original": False},
-    "#range"   : "1-30",
-    "#count"   : 30,
-},
-
-{
-    "#url"     : "https://www.deviantart.com/popular-24-hours/?q=tree+house",
-    "#category": ("", "deviantart", "popular"),
-    "#class"   : deviantart.DeviantartPopularExtractor,
-    "#options" : {"original": False},
-    "#range"   : "1-30",
-    "#count"   : 30,
-},
-
-{
-    "#url"     : "https://www.deviantart.com/artisan/popular-all-time/?q=tree",
-    "#category": ("", "deviantart", "popular"),
-    "#class"   : deviantart.DeviantartPopularExtractor,
-},
-
-{
     "#url"     : "https://www.deviantart.com/tag/nature",
     "#category": ("", "deviantart", "tag"),
     "#class"   : deviantart.DeviantartTagExtractor,
@@ -714,6 +687,17 @@ __tests__ = (
 },
 
 {
+    "#url"    : "https://www.deviantart.com/justatest235723/art/archive-1103129101",
+    "#comment": "ZIP archive + preview image (#3782)",
+    "#class"  : deviantart.DeviantartDeviationExtractor,
+    "#options": {"previews": True},
+    "#pattern": [
+        r"/f/940f2d05-c5eb-4917-8192-7eb6a2d508c6/di8rvv1-afe65948-16e1-4eca-b08d-9e6aaa9ed344\.zip",
+        r"/i/940f2d05-c5eb-4917-8192-7eb6a2d508c6/di8rvv1-bb9d891f-4374-4203-acd3-aea34b29a6a1\.png",
+    ],
+},
+
+{
     "#url"     : "https://www.deviantart.com/myria-moon/art/Aime-Moi-261986576",
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
@@ -781,6 +765,16 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.deviantart.com/justatest235723/art/video-1103119114",
+    "#comment" : "video",
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#pattern" : r"/f/940f2d05-c5eb-4917-8192-7eb6a2d508c6/di8ro5m-e2a5bdf0-daee-4e18-bede-fbfc394d6c65\.mp4\?token=ey",
+
+    "filename" : "video_63aebdd4bc0323da460796b9a2ac8522_by_justatest235723-di8ro5m",
+    "extension": "mp4",
+},
+
+{
     "#url"     : "https://www.deviantart.com/uotapo/art/INANAKI-Memo-590297498",
     "#comment" : "sta.sh URLs from description (#302)",
     "#category": ("", "deviantart", "deviation"),
@@ -811,7 +805,7 @@ __tests__ = (
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
     "#pattern" : """text:<!DOCTYPE html>\n""",
-    "#sha1_url": "d34b2c9f873423e665a1b8ced20fcb75951694a3",
+    "#sha1_url": "37302947642d1e53392ef8ee9b3f473a3c578e7c",
 },
 
 {
@@ -820,8 +814,23 @@ __tests__ = (
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
     "#pattern" : """text:<!DOCTYPE html>\n""",
-    "#sha1_url": "e2e0044bd255304412179b6118536dbd9bb3bb0e",
+    "#sha1_url": "8ca1dc8df53d3707c778d08a604f9ad9ddba7469",
 },
+
+{
+    "#url"     : "https://www.deviantart.com/stash/09z3557z648",
+    "#comment" : "sta.sh journal (#6207)",
+    "#class"   : deviantart.DeviantartStashExtractor,
+    "#pattern" : """text:<!DOCTYPE html>\n""",
+},
+
+{
+    "#url"     : "https://www.deviantart.com/starvinglunatic/art/Against-the-world-chapter-1-50968347",
+    "#comment" : "literature (#6254)",
+    "#class"   : deviantart.DeviantartDeviationExtractor,
+    "#pattern" : """text:<!DOCTYPE html>\n""",
+},
+
 
 {
     "#url"     : "https://www.deviantart.com/neotypical/art/985226590",
@@ -829,6 +838,7 @@ __tests__ = (
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
     "#count"   : 0,
+    "#exception": exception.NotFoundError,
 },
 
 {
@@ -866,7 +876,7 @@ __tests__ = (
     "#url"     : "https://www.deviantart.com/view/706871727",
     "#category": ("", "deviantart", "deviation"),
     "#class"   : deviantart.DeviantartDeviationExtractor,
-    "#sha1_content": "87dff6056fc9a2bf77f75317a1e00e18451b3c80",
+    "#sha1_content": "4d013515e72dec1e3977c82fd71ce4b15b8bd856",
 },
 
 {
@@ -1001,6 +1011,12 @@ __tests__ = (
     "#pattern" : deviantart.DeviantartUserExtractor.pattern,
     "#range"   : "1-50",
     "#count"   : 50,
+},
+
+{
+    "#url"     : "https://www.deviantart.com/shimoda7/watching",
+    "#category": ("", "deviantart", "following"),
+    "#class"   : deviantart.DeviantartFollowingExtractor,
 },
 
 )

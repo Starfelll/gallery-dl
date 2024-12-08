@@ -10,7 +10,6 @@ import os
 import sys
 import shutil
 import logging
-import functools
 import unicodedata
 from . import config, util, formatter
 
@@ -18,15 +17,34 @@ from . import config, util, formatter
 # --------------------------------------------------------------------
 # Globals
 
+try:
+    TTY_STDOUT = sys.stdout.isatty()
+except Exception:
+    TTY_STDOUT = False
+
+try:
+    TTY_STDERR = sys.stderr.isatty()
+except Exception:
+    TTY_STDERR = False
+
+try:
+    TTY_STDIN = sys.stdin.isatty()
+except Exception:
+    TTY_STDIN = False
+
+
+COLORS_DEFAULT = {}
 COLORS = not os.environ.get("NO_COLOR")
-COLORS_DEFAULT = {
-    "success": "1;32",
-    "skip"   : "2",
-    "debug"  : "0;37",
-    "info"   : "1;37",
-    "warning": "1;33",
-    "error"  : "1;31",
-} if COLORS else {}
+if COLORS:
+    if TTY_STDOUT:
+        COLORS_DEFAULT["success"] = "1;32"
+        COLORS_DEFAULT["skip"] = "2"
+    if TTY_STDERR:
+        COLORS_DEFAULT["debug"] = "0;37"
+        COLORS_DEFAULT["info"] = "1;37"
+        COLORS_DEFAULT["warning"] = "1;33"
+        COLORS_DEFAULT["error"] = "1;31"
+
 
 if util.WINDOWS:
     ANSI = COLORS and os.environ.get("TERM") == "ANSI"
@@ -90,39 +108,6 @@ class LoggerAdapter():
         if self.logger.isEnabledFor(logging.ERROR):
             kwargs["extra"] = self.extra
             self.logger._log(logging.ERROR, msg, args, **kwargs)
-
-
-class LoggerAdapterActions():
-
-    def __init__(self, logger, job):
-        self.logger = logger
-        self.extra = job._logger_extra
-        self.actions = job._logger_actions
-
-        self.debug = functools.partial(self.log, logging.DEBUG)
-        self.info = functools.partial(self.log, logging.INFO)
-        self.warning = functools.partial(self.log, logging.WARNING)
-        self.error = functools.partial(self.log, logging.ERROR)
-
-    def log(self, level, msg, *args, **kwargs):
-        msg = str(msg)
-        if args:
-            msg = msg % args
-
-        actions = self.actions[level]
-        if actions:
-            args = self.extra.copy()
-            args["level"] = level
-
-            for cond, action in actions:
-                if cond(msg):
-                    action(args)
-
-            level = args["level"]
-
-        if self.logger.isEnabledFor(level):
-            kwargs["extra"] = self.extra
-            self.logger._log(level, msg, (), **kwargs)
 
 
 class PathfmtProxy():
@@ -357,7 +342,7 @@ def select():
 
     if mode is None or mode == "auto":
         try:
-            if sys.stdout.isatty():
+            if TTY_STDOUT:
                 output = ColorOutput() if ANSI else TerminalOutput()
             else:
                 output = PipeOutput()
@@ -365,6 +350,8 @@ def select():
             output = PipeOutput()
     elif isinstance(mode, dict):
         output = CustomOutput(mode)
+    elif not mode:
+        output = NullOutput()
     else:
         output = {
             "default" : PipeOutput,
