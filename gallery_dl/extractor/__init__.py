@@ -220,6 +220,9 @@ modules = [
     "noop",
     "ytdl",
     "generic",
+    "miyoushe",
+    "bilibili",
+    "lofter"
 ]
 
 

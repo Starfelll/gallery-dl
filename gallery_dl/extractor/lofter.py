@@ -4,152 +4,87 @@
 # it under the terms of the GNU General Public License version 2 as
 # published by the Free Software Foundation.
 
-"""Extractors for https://www.lofter.com/"""
+"""Extractors for https://lofter.com/"""
+
+import itertools
+from urllib import parse
+import re
 
 from .common import Extractor, Message
-from .. import text, util, exception
+from .. import text, exception
+
+
+BASE_PATTERN = (r"(?:https?://)?(.*)\.(?:lofter)\.com/")
 
 
 class LofterExtractor(Extractor):
     """Base class for lofter extractors"""
     category = "lofter"
-    root = "https://www.lofter.com"
-    directory_fmt = ("{category}", "{blog_name}")
+    directory_fmt = ("{category}", "{user[name]}")
     filename_fmt = "{id}_{num}.{extension}"
-    archive_fmt = "{id}_{num}"
+    archive_fmt = "{user[name]}_{id}_{num}"
+    cookiedomain = ".lofter.com"
 
-    def _init(self):
-        self.api = LofterAPI(self)
+    def __init__(self, match):
+        Extractor.__init__(self, match)
+        self.username = match.group(1)
+        self.root = f"https://{self.username}.lofter.com"
 
     def items(self):
-        for post in self.posts():
-            if post is None:
-                continue
-            if "post" in post:
-                post = post["post"]
+        posts = self.posts()
+        metadata = self.metadata()
 
-            post["blog_name"] = post["blogInfo"]["blogName"]
-            post["date"] = text.parse_timestamp(post["publishTime"] // 1000)
-            post_type = post["type"]
+        for post in posts:
+            data = {}
+            data.update(metadata)
 
-            # Article
-            if post_type == 1:
-                content = post["content"]
-                image_urls = text.extract_iter(content, '<img src="', '"')
-                image_urls = [text.unescape(x) for x in image_urls]
-                image_urls = [x.partition("?")[0] for x in image_urls]
-
-            # Photo
-            elif post_type == 2:
-                photo_links = util.json_loads(post["photoLinks"])
-                image_urls = [x["orign"] for x in photo_links]
-                image_urls = [x.partition("?")[0] for x in image_urls]
-
-            # Video
-            elif post_type == 4:
-                embed = util.json_loads(post["embed"])
-                image_urls = [embed["originUrl"]]
-
-            # Answer
-            elif post_type == 5:
-                images = util.json_loads(post["images"])
-                image_urls = [x["orign"] for x in images]
-                image_urls = [x.partition("?")[0] for x in image_urls]
-
-            else:
-                image_urls = ()
-                self.log.warning(
-                    "%s: Unsupported post type '%s'.",
-                    post["id"], post_type)
-
-            post["count"] = len(image_urls)
-            yield Message.Directory, post
-            for post["num"], url in enumerate(image_urls, 1):
-                yield Message.Url, url, text.nameext_from_url(url, post)
+            num = 0
+            yield Message.Directory, data
+            #for i in range(len(post['imgurls'])):
+            for num, img in enumerate(post['imgurls']):
+                img_metadata = text.nameext_from_url(img, data)
+                img_metadata.update({'num': num})
+                yield Message.Url, img, img_metadata
 
     def posts(self):
-        return ()
+        """Return an iterable containing all relevant 'posts' objects"""
+
+    def metadata(self):
+        """Collect metadata for extractor job"""
+        return {}
 
 
 class LofterPostExtractor(LofterExtractor):
-    """Extractor for a lofter post"""
+    """Base class for lofter post extractors"""
     subcategory = "post"
-    pattern = r"(?:https?://)?[\w-]+\.lofter\.com/post/([0-9a-f]+)_([0-9a-f]+)"
-    example = "https://BLOG.lofter.com/post/12345678_90abcdef"
+    pattern = BASE_PATTERN + r"post/([^/?#]+_[^/?#]+)"
+
+    def __init__(self, match):
+        LofterExtractor.__init__(self, match)
+        self.permalink = match.group(2)
+        self.post_metadata = {}
 
     def posts(self):
-        blog_id, post_id = self.groups
-        post = self.api.post(int(blog_id, 16), int(post_id, 16))
-        return (post,)
+        url = f"{self.root}/post/{self.permalink}"
+        post_html = self.request(url).text
 
+        imgurls = re.findall(r'bigimgsrc="(.*?)\.*\?', post_html)
+        tags_quote = re.findall(f'href="https://{self.username}' +
+                                r'.lofter.com/tag/(.*?)"', post_html)
+        tags = []
+        for tag in tags_quote:
+            tags.append(parse.unquote(tag))
 
-class LofterBlogPostsExtractor(LofterExtractor):
-    """Extractor for a lofter blog's posts"""
-    subcategory = "blog-posts"
-    pattern = (r"(?:https?://)?(?:"
-               # https://www.lofter.com/front/blog/home-page/<blog_name>
-               r"www\.lofter\.com/front/blog/home-page/([\w-]+)|"
-               # https://<blog_name>.lofter.com/
-               r"([\w-]+)\.lofter\.com"
-               r")/?(?:$|\?|#)")
-    example = "https://BLOG.lofter.com/"
-
-    def posts(self):
-        blog_name = self.groups[0] or self.groups[1]
-        return self.api.blog_posts(blog_name)
-
-
-class LofterAPI():
-
-    def __init__(self, extractor):
-        self.extractor = extractor
-
-    def blog_posts(self, blog_name):
-        endpoint = "/v2.0/blogHomePage.api"
-        params = {
-            "method": "getPostLists",
-            "offset": 0,
-            "limit": 200,
-            "blogdomain": blog_name + ".lofter.com",
+        self.post_metadata = {
+            "tags": tags, "id": self.permalink,
+            "user": {
+                "nick_name": re.findall(r'<h1><a href="/">(.*?)</a></h1>', post_html)[0],
+                "name": self.username,
+            },
+            "img_count": len(imgurls),
+            "title": re.findall(r"<title>(.*?)\-.*</title>", post_html)[0],
         }
-        return self._pagination(endpoint, params)
+        return ({"imgurls": imgurls},)
 
-    def post(self, blog_id, post_id):
-        endpoint = "/oldapi/post/detail.api"
-        params = {
-            "targetblogid": blog_id,
-            "postid": post_id,
-        }
-        return self._call(endpoint, params)["posts"][0]
-
-    def _call(self, endpoint, data):
-        url = "https://api.lofter.com" + endpoint
-        params = {
-            'product': 'lofter-android-7.9.10'
-        }
-        response = self.extractor.request(
-            url, method="POST", params=params, data=data)
-        info = response.json()
-
-        if info["meta"]["status"] == 4200:
-            raise exception.NotFoundError("blog")
-
-        if info["meta"]["status"] != 200:
-            self.extractor.log.debug("Server response: %s", info)
-            raise exception.StopExtraction("API request failed")
-
-        return info["response"]
-
-    def _pagination(self, endpoint, params):
-        while True:
-            data = self._call(endpoint, params)
-            posts = data["posts"]
-
-            yield from posts
-
-            if data["offset"] < 0:
-                break
-
-            if params["offset"] + len(posts) < data["offset"]:
-                break
-            params["offset"] = data["offset"]
+    def metadata(self):
+        return self.post_metadata
