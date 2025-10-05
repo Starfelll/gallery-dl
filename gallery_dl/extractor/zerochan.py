@@ -26,6 +26,7 @@ class ZerochanExtractor(BooruExtractor):
     per_page = 250
     cookies_domain = ".zerochan.net"
     cookies_names = ("z_id", "z_hash")
+    useragent = util.USERAGENT
     request_interval = (0.5, 1.5)
 
     def login(self):
@@ -55,7 +56,8 @@ class ZerochanExtractor(BooruExtractor):
             "login"   : "Login",
         }
 
-        response = self.request(url, method="POST", headers=headers, data=data)
+        response = self.request(
+            url, method="POST", headers=headers, data=data, expected=(500,))
         if not response.history:
             raise exception.AuthenticationError()
 
@@ -63,7 +65,7 @@ class ZerochanExtractor(BooruExtractor):
 
     def _parse_entry_html(self, entry_id):
         url = f"{self.root}/{entry_id}"
-        page = self.request(url).text
+        page = self.request(url, expected=(500,)).text
 
         try:
             jsonld = self._extract_jsonld(page)
@@ -191,7 +193,13 @@ class ZerochanTagExtractor(ZerochanExtractor):
         metadata = self.config("metadata")
 
         while True:
-            page = self.request(url, params=params).text
+            try:
+                page = self.request(
+                    url, params=params, expected=(500,)).text
+            except exception.HttpError as exc:
+                if exc.status == 404:
+                    return
+                raise
             thumbs = text.extr(page, '<ul id="thumbs', '</ul>')
             extr = text.extract_from(thumbs)
 
@@ -230,7 +238,13 @@ class ZerochanTagExtractor(ZerochanExtractor):
         }
 
         while True:
-            response = self.request(url, params=params, allow_redirects=False)
+            try:
+                response = self.request(
+                    url, params=params, allow_redirects=False)
+            except exception.HttpError as exc:
+                if exc.status == 404:
+                    return
+                raise
 
             if response.status_code >= 300:
                 url = text.urljoin(self.root, response.headers["location"])
@@ -274,12 +288,18 @@ class ZerochanImageExtractor(ZerochanExtractor):
     pattern = BASE_PATTERN + r"/(\d+)"
     example = "https://www.zerochan.net/12345"
 
-    def __init__(self, match):
-        ZerochanExtractor.__init__(self, match)
-        self.image_id = match[1]
-
     def posts(self):
-        post = self._parse_entry_html(self.image_id)
+        image_id = self.groups[0]
+
+        try:
+            post = self._parse_entry_html(image_id)
+        except exception.HttpError as exc:
+            if exc.status in (404, 410):
+                if msg := text.extr(exc.response.text, "<h2>", "<"):
+                    self.log.warning(f"'{msg}'")
+                return ()
+            raise
+
         if self.config("metadata"):
-            post.update(self._parse_entry_api(self.image_id))
+            post.update(self._parse_entry_api(image_id))
         return (post,)

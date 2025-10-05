@@ -144,8 +144,45 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.facebook.com/media/set/?set=a.127331797422780&type=3",
+    "#comment" : "pfbid user ID; 'This content isn't available right now' profile",
+    "#class"   : facebook.FacebookSetExtractor,
+    "#metadata": "post",
+    "#range"   : "0",
+
+    "caption"   : "Amarte es mi hábito favorito",
+    "date"      : "dt:2025-05-03 03:42:52",
+    "set_id"    : "a.127331797422780",
+    "title"     : "Profile pictures",
+    "user_id"   : "100004378810826",
+    "user_pfbid": r"re:pfbid\w{64}",
+    "username"  : "Angel Nava Santiago",
+},
+
+{
     "#url"     : "https://www.facebook.com/photo.php?fbid=10165113568399554&set=t.100064860875397&type=3",
     "#class"   : facebook.FacebookPhotoExtractor,
+},
+
+{
+    "#url"     : "https://www.facebook.com/photo.php/?fbid=10165113568399554&set=t.100064860875397",
+    "#class"   : facebook.FacebookPhotoExtractor,
+},
+
+{
+    "#url"     : "https://www.facebook.com/photo?fbid=10165113568399554&set=t.100064860875397",
+    "#class"   : facebook.FacebookPhotoExtractor,
+},
+
+{
+    "#url"     : "https://www.facebook.com/photo/?fbid=10165113568399554&set=t.100064860875397&type=3",
+    "#class"   : facebook.FacebookPhotoExtractor,
+},
+
+{
+    "#url"     : "https://www.facebook.com/photo/?fbid=10165113568399554&set=t.100064860875397&type=3&setextract",
+    "#class"   : facebook.FacebookPhotoExtractor,
+    "#fail"    : "'setextract' query parameter",
 },
 
 {
@@ -291,6 +328,20 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://www.facebook.com/instagram/info",
+    "#class"   : facebook.FacebookInfoExtractor,
+    "#metadata": "post",
+
+    "id"            : "100064469571787",
+    "name"          : "Instagram",
+    "username"      : "instagram",
+    "biography"     : "Discover what's new on Instagram 🔎✨",
+    "url"           : "https://www.facebook.com/instagram",
+    "set_id"        : "",
+    "!user_pfbid"    : r"re:pfbid\w{64}",
+},
+
+{
     "#url"     : "https://www.facebook.com/brando.cha.3/info",
     "#class"   : facebook.FacebookInfoExtractor,
     "#metadata": "post",
@@ -298,6 +349,7 @@ __tests__ = (
     "id"            : "100046356937542",
     "name"          : "Throwaway Idk",
     "username"      : "brando.cha.3",
+    "biography"     : "",
     "url"           : "https://www.facebook.com/brando.cha.3",
     "alternate_name": "",
     "profile_video" : None,
@@ -331,6 +383,16 @@ __tests__ = (
             "url"     : "https://www.facebook.com/brando.cha.3/videos",
         },
     ],
+},
+
+{
+    "#url"     : "https://www.facebook.com/Forgetmen0w/info",
+    "#comment" : "'biography' fallback (#8233)",
+    "#class"   : facebook.FacebookInfoExtractor,
+    "#auth"    : True,
+    "#metadata": "post",
+
+    "biography": "G ❤️",
 },
 
 )

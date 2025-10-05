@@ -80,6 +80,8 @@ class FacebookExtractor(Extractor):
             directory["user_id"] = (
                 text.extr(
                     set_page, '"actors":[{"__typename":"User","id":"', '"') or
+                text.extr(
+                    set_page, '"userID":"', '"') or
                 directory["set_id"].split(".")[1])
 
         return directory
@@ -367,39 +369,21 @@ class FacebookExtractor(Extractor):
                 for edge in (user["profile_tabs"]["profile_user"]
                              ["timeline_nav_app_sections"]["edges"])
             ]
+
+            if bio := text.extr(page, '"best_description":{"text":"', '"'):
+                user["biography"] = self.decode_all(bio)
+            elif (pos := page.find(
+                    '"__module_operation_ProfileCometTileView_profileT')) >= 0:
+                user["biography"] = self.decode_all(text.rextr(
+                    page, '"text":"', '"', pos))
+            else:
+                user["biography"] = text.unescape(text.remove_html(text.extr(
+                    page, "</span></span></h2>", "<ul>")))
         except Exception:
             if user is None:
                 self.log.debug("Failed to extract user data: %s", data)
                 user = {}
         return user
-
-
-class FacebookSetExtractor(FacebookExtractor):
-    """Base class for Facebook Set extractors"""
-    subcategory = "set"
-    pattern = (
-        BASE_PATTERN +
-        r"/(?:(?:media/set|photo)/?\?(?:[^&#]+&)*set=([^&#]+)"
-        r"[^/?#]*(?<!&setextract)$"
-        r"|([^/?#]+/posts/[^/?#]+)"
-        r"|photo/\?(?:[^&#]+&)*fbid=([^/?&#]+)&set=([^/?&#]+)&setextract)"
-    )
-    example = "https://www.facebook.com/media/set/?set=SET_ID"
-
-    def items(self):
-        set_id = self.groups[0] or self.groups[3]
-        if path := self.groups[1]:
-            post_url = self.root + "/" + path
-            post_page = self.request(post_url).text
-            set_id = self.parse_post_page(post_page)["set_id"]
-
-        set_url = f"{self.root}/media/set/?set={set_id}"
-        set_page = self.request(set_url).text
-        set_data = self.parse_set_page(set_page)
-        if self.groups[2]:
-            set_data["first_photo_id"] = self.groups[2]
-
-        return self.extract_set(set_data)
 
 
 class FacebookPhotoExtractor(FacebookExtractor):
@@ -437,6 +421,34 @@ class FacebookPhotoExtractor(FacebookExtractor):
                 i += 1
                 comment_photo["num"] = i
                 yield Message.Url, comment_photo["url"], comment_photo
+
+
+class FacebookSetExtractor(FacebookExtractor):
+    """Base class for Facebook Set extractors"""
+    subcategory = "set"
+    pattern = (
+        BASE_PATTERN +
+        r"/(?:(?:media/set|photo)/?\?(?:[^&#]+&)*set=([^&#]+)"
+        r"[^/?#]*(?<!&setextract)$"
+        r"|([^/?#]+/posts/[^/?#]+)"
+        r"|photo/\?(?:[^&#]+&)*fbid=([^/?&#]+)&set=([^/?&#]+)&setextract)"
+    )
+    example = "https://www.facebook.com/media/set/?set=SET_ID"
+
+    def items(self):
+        set_id = self.groups[0] or self.groups[3]
+        if path := self.groups[1]:
+            post_url = self.root + "/" + path
+            post_page = self.request(post_url).text
+            set_id = self.parse_post_page(post_page)["set_id"]
+
+        set_url = f"{self.root}/media/set/?set={set_id}"
+        set_page = self.request(set_url).text
+        set_data = self.parse_set_page(set_page)
+        if self.groups[2]:
+            set_data["first_photo_id"] = self.groups[2]
+
+        return self.extract_set(set_data)
 
 
 class FacebookVideoExtractor(FacebookExtractor):

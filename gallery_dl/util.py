@@ -542,6 +542,7 @@ def language_to_code(lang, default=None):
 CODES = {
     "ar": "Arabic",
     "bg": "Bulgarian",
+    "bn": "Bengali",
     "ca": "Catalan",
     "cs": "Czech",
     "da": "Danish",
@@ -549,9 +550,11 @@ CODES = {
     "el": "Greek",
     "en": "English",
     "es": "Spanish",
+    "fa": "Persian",
     "fi": "Finnish",
     "fr": "French",
     "he": "Hebrew",
+    "hi": "Hindi",
     "hu": "Hungarian",
     "id": "Indonesian",
     "it": "Italian",
@@ -564,9 +567,13 @@ CODES = {
     "pt": "Portuguese",
     "ro": "Romanian",
     "ru": "Russian",
+    "sk": "Slovak",
+    "sl": "Slovenian",
+    "sr": "Serbian",
     "sv": "Swedish",
     "th": "Thai",
     "tr": "Turkish",
+    "uk": "Ukrainian",
     "vi": "Vietnamese",
     "zh": "Chinese",
 }
@@ -633,6 +640,12 @@ class NullResponse():
     def __init__(self, url, reason=""):
         self.url = url
         self.reason = str(reason)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
 
     def __str__(self):
         return "900 " + self.reason
@@ -987,16 +1000,21 @@ def build_proxy_map(proxies, log=None):
     if isinstance(proxies, str):
         if "://" not in proxies:
             proxies = "http://" + proxies.lstrip("/")
-        return {"http": proxies, "https": proxies}
-
-    if isinstance(proxies, dict):
+        proxies = {"http": proxies, "https": proxies}
+    elif isinstance(proxies, dict):
         for scheme, proxy in proxies.items():
             if "://" not in proxy:
                 proxies[scheme] = "http://" + proxy.lstrip("/")
-        return proxies
+    else:
+        proxies = None
 
     if log is not None:
-        log.warning("invalid proxy specifier: %s", proxies)
+        if proxies is None:
+            log.warning("Invalid proxy specifier: %r", proxies)
+        else:
+            log.debug("Proxy Map: %s", proxies)
+
+    return proxies
 
 
 def build_predicate(predicates):

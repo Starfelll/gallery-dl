@@ -143,7 +143,7 @@ class Extractor():
         return values
 
     def request(self, url, method="GET", session=None, fatal=True,
-                retries=None, retry_codes=None, interval=True,
+                retries=None, retry_codes=None, expected=(), interval=True,
                 encoding=None, notfound=None, **kwargs):
         if session is None:
             session = self.session
@@ -202,6 +202,7 @@ class Extractor():
                     self._dump_response(response)
                 if (
                     code < 400 or
+                    code in expected or
                     code < 500 and (
                         not fatal and code != 429 or fatal is None) or
                     fatal is ...
@@ -353,12 +354,11 @@ class Extractor():
             raise exception.AbortExtraction(
                 f"User input required ({prompt.strip(' :')})")
 
-    def _get_auth_info(self):
+    def _get_auth_info(self, password=None):
         """Return authentication information as (username, password) tuple"""
         username = self.config("username")
-        password = None
 
-        if username:
+        if username or password:
             password = self.config("password")
             if not password:
                 self._check_input_allowed("password")
@@ -461,7 +461,7 @@ class Extractor():
                 headers["Referer"] = self.root + "/"
 
         custom_ua = self.config("user-agent")
-        if custom_ua is None or custom_ua == "auto":
+        if not custom_ua or custom_ua == "auto":
             pass
         elif custom_ua == "browser":
             headers["User-Agent"] = _browser_useragent(None)
@@ -541,6 +541,10 @@ class Extractor():
             try:
                 with open(path) as fp:
                     cookies = util.cookiestxt_load(fp)
+            except ValueError as exc:
+                self.log.warning("cookies: Invalid Netscape cookies.txt file "
+                                 "'%s' (%s: %s)",
+                                 cookies_source, exc.__class__.__name__, exc)
             except Exception as exc:
                 self.log.warning("cookies: Failed to load '%s' (%s: %s)",
                                  cookies_source, exc.__class__.__name__, exc)
@@ -662,12 +666,18 @@ class Extractor():
         return False
 
     def _extract_jsonld(self, page):
-        return util.json_loads(text.extr(
-            page, '<script type="application/ld+json">', "</script>"))
+        return util.json_loads(
+            text.extr(page, '<script type="application/ld+json">',
+                      "</script>") or
+            text.extr(page, "<script type='application/ld+json'>",
+                      "</script>"))
 
     def _extract_nextdata(self, page):
-        return util.json_loads(text.extr(
-            page, ' id="__NEXT_DATA__" type="application/json">', "</script>"))
+        return util.json_loads(
+            text.extr(page, ' id="__NEXT_DATA__" type="application/json">',
+                      "</script>") or
+            text.extr(page, " id='__NEXT_DATA__' type='application/json'>",
+                      "</script>"))
 
     def _cache(self, func, maxage, keyarg=None):
         #  return cache.DatabaseCacheDecorator(func, maxage, keyarg)

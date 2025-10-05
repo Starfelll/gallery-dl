@@ -111,10 +111,6 @@ class KemonoExtractor(Extractor):
                 if dms is True:
                     dms = self.api.creator_dms(
                         post["service"], post["user"])
-                    try:
-                        dms = dms["props"]["dms"]
-                    except Exception:
-                        dms = ()
                 post["dms"] = dms
             if announcements is not None:
                 if announcements is True:
@@ -155,7 +151,8 @@ class KemonoExtractor(Extractor):
                     file["extension"] = ext
                 elif ext == "txt" and file["extension"] != "txt":
                     file["_http_validate"] = _validate
-                elif ext in exts_archive:
+                elif ext in exts_archive or \
+                        ext == "bin" and file["extension"] in exts_archive:
                     file["type"] = "archive"
                     if archives:
                         try:
@@ -324,25 +321,14 @@ class KemonoUserExtractor(KemonoExtractor):
     def posts(self):
         _, _, service, creator_id, query = self.groups
         params = text.parse_query(query)
-        tag = params.get("tag")
 
-        endpoint = self.config("endpoint")
-        if endpoint == "legacy+":
-            endpoint = self._posts_legacy_plus
-        elif endpoint == "legacy" or tag:
-            endpoint = self.api.creator_posts_legacy
+        if self.config("endpoint") in ("posts+", "legacy+"):
+            endpoint = self.api.creator_posts_expand
         else:
             endpoint = self.api.creator_posts
 
         return endpoint(service, creator_id,
-                        params.get("o"), params.get("q"), tag)
-
-    def _posts_legacy_plus(self, service, creator_id,
-                           offset=0, query=None, tags=None):
-        for post in self.api.creator_posts_legacy(
-                service, creator_id, offset, query, tags):
-            yield self.api.creator_post(
-                service, creator_id, post["id"])["post"]
+                        params.get("o"), params.get("q"), params.get("tag"))
 
 
 class KemonoPostsExtractor(KemonoExtractor):
@@ -421,7 +407,11 @@ class KemonoDiscordExtractor(KemonoExtractor):
             r"(/[A-Za-z0-9-._~:/?#\[\]@!$&'()*+,;%=]+)").findall
         find_hash = util.re(HASH_PATTERN).match
 
-        posts = self.api.discord_channel(channel_id)
+        if (order := self.config("order-posts")) and order[0] in ("r", "d"):
+            posts = self.api.discord_channel(channel_id, channel["post_count"])
+        else:
+            posts = self.api.discord_channel(channel_id)
+
         if max_posts := self.config("max-posts"):
             posts = itertools.islice(posts, max_posts)
 
@@ -577,6 +567,7 @@ class KemonoAPI():
     def __init__(self, extractor):
         self.extractor = extractor
         self.root = extractor.root + "/api/v1"
+        self.headers = {"Accept": "text/css"}
 
     def posts(self, offset=0, query=None, tags=None):
         endpoint = "/posts"
@@ -588,20 +579,21 @@ class KemonoAPI():
         return self._call(endpoint)
 
     def creators(self):
-        endpoint = "/creators.txt"
+        endpoint = "/creators"
         return self._call(endpoint)
 
     def creator_posts(self, service, creator_id,
                       offset=0, query=None, tags=None):
-        endpoint = f"/{service}/user/{creator_id}"
-        params = {"q": query, "tag": tags, "o": offset}
+        endpoint = f"/{service}/user/{creator_id}/posts"
+        params = {"o": offset, "tag": tags, "q": query}
         return self._pagination(endpoint, params, 50)
 
-    def creator_posts_legacy(self, service, creator_id,
+    def creator_posts_expand(self, service, creator_id,
                              offset=0, query=None, tags=None):
-        endpoint = f"/{service}/user/{creator_id}/posts-legacy"
-        params = {"o": offset, "tag": tags, "q": query}
-        return self._pagination(endpoint, params, 50, "results")
+        for post in self.creator_posts(
+                service, creator_id, offset, query, tags):
+            yield self.creator_post(
+                service, creator_id, post["id"])["post"]
 
     def creator_announcements(self, service, creator_id):
         endpoint = f"/{service}/user/{creator_id}/announcements"
@@ -639,9 +631,12 @@ class KemonoAPI():
         endpoint = f"/{service}/user/{creator_id}/tags"
         return self._call(endpoint)
 
-    def discord_channel(self, channel_id):
+    def discord_channel(self, channel_id, post_count=None):
         endpoint = f"/discord/channel/{channel_id}"
-        return self._pagination(endpoint, {}, 150)
+        if post_count is None:
+            return self._pagination(endpoint, {}, 150)
+        else:
+            return self._pagination_reverse(endpoint, {}, 150, post_count)
 
     def discord_channel_lookup(self, server_id):
         endpoint = f"/discord/channel/lookup/{server_id}"
@@ -656,18 +651,24 @@ class KemonoAPI():
         params = {"type": type}
         return self._call(endpoint, params)
 
-    def _call(self, endpoint, params=None, fatal=True):
-        return self.extractor.request_json(
-            self.root + endpoint, params=params, fatal=fatal)
+    def _call(self, endpoint, params=None, headers=None, fatal=True):
+        if headers is None:
+            headers = self.headers
+        else:
+            headers = {**self.headers, **headers}
 
-    def _pagination(self, endpoint, params, batch=50, key=False):
+        return self.extractor.request_json(
+            f"{self.root}{endpoint}", params=params, headers=headers,
+            encoding="utf-8", fatal=fatal)
+
+    def _pagination(self, endpoint, params, batch=50, key=None):
         offset = text.parse_int(params.get("o"))
         params["o"] = offset - offset % batch
 
         while True:
             data = self._call(endpoint, params)
 
-            if key:
+            if key is not None:
                 data = data.get(key)
             if not data:
                 return
@@ -676,3 +677,18 @@ class KemonoAPI():
             if len(data) < batch:
                 return
             params["o"] += batch
+
+    def _pagination_reverse(self, endpoint, params, batch, count):
+        params["o"] = count // batch * batch
+
+        while True:
+            data = self._call(endpoint, params)
+
+            if not data:
+                return
+            data.reverse()
+            yield from data
+
+            if not params["o"]:
+                return
+            params["o"] -= batch

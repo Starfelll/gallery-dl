@@ -49,7 +49,7 @@ __tests__ = (
     "origin": "ja",
     "published": 2023,
     "publisher": (),
-    "rank": range(29_000, 32_000),
+    "rank": range(20_000, 40_000),
     "rating": "safe",
     "score": float,
     "status": "Ongoing",
@@ -76,6 +76,20 @@ __tests__ = (
         "ebj"  : "https://ebookjapan.yahoo.co.jp/books/754652/",
         "engtl": "https://sevenseasentertainment.com/series/cats-with-jobs/",
     },
+},
+
+{
+    "#url"     : "https://comick.io/comic/neko-no-oshigoto/L7TaJB4n-chapter-10.7-xy",
+    "#comment" : "redirect",
+    "#class"   : comick.ComickChapterExtractor,
+    "#pattern" : r"https://meo.comick.pictures/\d-\w+\.webp",
+
+    "volume"        : 1,
+    "chapter"       : 10,
+    "chapter_minor" : ".5",
+    "chapter_hid"   : "L7TaJB4n",
+    "chapter_id"    : 4105343,
+    "chapter_string": "L7TaJB4n-chapter-10.5-en",
 },
 
 {
@@ -164,11 +178,62 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://comick.io/comic/00-boku-no-hero-academia/0nJzK-volume-1-en",
+    "#comment" : "volume-only chapter (#8043)",
+    "#class"   : comick.ComickChapterExtractor,
+    "#pattern" : r"https://meo.comick.pictures/\d+-[\w-]+\.(jpg|png)",
+    "#count"   : 187,
+
+    "manga"         : "Boku no Hero Academia",
+    "manga_hid"     : "q1hZ1dbv",
+    "manga_id"      : 11359,
+    "manga_slug"    : "00-boku-no-hero-academia",
+    "volume"        : 1,
+    "chapter"       : 0,
+    "chapter_hid"   : "0nJzK",
+    "chapter_id"    : 2285787,
+    "chapter_minor" : "",
+    "chapter_string": "0nJzK-volume-1-en",
+    "title"         : "",
+    "lang"          : "en",
+    "artist"        : ["Horikoshi Kouhei"],
+    "author"        : ["Horikoshi Kouhei"],
+    "group"         : ["Official"],
+    "count"         : 187,
+    "date"          : "dt:2022-10-08 06:07:50",
+    "date_updated"  : "dt:2025-01-01 18:56:24",
+    "demographic"   : "Shounen",
+    "extension"     : {"jpg", "png"},
+    "filename"      : str,
+    "width"         : int,
+    "height"        : int,
+    "mature"        : True,
+    "origin"        : "ja",
+    "published"     : 2014,
+    "rating"        : "safe",
+    "score"         : float,
+    "status"        : "Complete",
+},
+
+{
+    "#url"     : "https://comick.io/comic/00-fate-extra/eE2wOoqb-chapter-35-en",
+    "#comment" : "missing page data (#8054)",
+    "#class"   : comick.ComickChapterExtractor,
+    "#count"   : 0,
+    "#log"     : "eE2wOoqb-chapter-35-en: Broken Chapter (missing 'b2key' for all pages)",
+},
+
+{
     "#url"     : "https://comick.io/comic/kobayashi-san-chi-no-maid-dragon",
     "#comment" : "all chapters",
     "#class"   : comick.ComickMangaExtractor,
     "#pattern" : comick.ComickChapterExtractor.pattern,
     "#count"   : range(890, 1000),
+
+    "volume" : int,
+    "chapter": int,
+    "chapter_minor": str,
+    "lang"   : "iso:639",
 },
 
 {
@@ -232,6 +297,78 @@ __tests__ = (
 
     "chapter": {0, 1},
     "lang"   : "es-419",
+},
+
+{
+    "#url"     : "https://comick.io/comic/fate-type-redline?lang=en&group=BananaShiki",
+    "#comment" : "'group_name' is None for some chapters (#8045)",
+    "#class"   : comick.ComickMangaExtractor,
+    "#pattern" : comick.ComickChapterExtractor.pattern,
+    "#count"   : range(50, 100),
+},
+
+{
+    "#url"     : "https://comick.io/comic/q1hZ1dbv",
+    "#comment" : "volume-only 'chapters' (#8043)",
+    "#class"   : comick.ComickMangaExtractor,
+    "#range"   : "1-5",
+    "#results" : (
+        "https://comick.io/comic/00-boku-no-hero-academia/0nJzK-volume-1-en",
+        "https://comick.io/comic/00-boku-no-hero-academia/oBxML-volume-1-en",
+        "https://comick.io/comic/00-boku-no-hero-academia/lyq4r-volume-2-en",
+        "https://comick.io/comic/00-boku-no-hero-academia/wNJYr-volume-2-en",
+        "https://comick.io/comic/00-boku-no-hero-academia/nAv4E-volume-3-en",
+    ),
+
+    "volume" : {1, 2, 3},
+    "chapter": 0,
+    "chapter_minor": "",
+    "lang"   : "iso:639",
+},
+
+{
+    "#url"     : "https://comick.io/comic/neko-no-oshigoto/cover",
+    "#class"   : comick.ComickCoversExtractor,
+    "#results" : (
+        "https://meo.comick.pictures/l6wvkz.jpg",
+        "https://meo.comick.pictures/X8xRNp.jpg",
+    ),
+
+    "id"          : {45687770, 45687771},
+    "width"       : {1053, 1055},
+    "height"      : 1500,
+    "size"        : int,
+    "lang"        : "ja",
+    "extension"   : "jpg",
+    "manga"       : "Neko no Oshigoto",
+    "volume"      : range(1, 2),
+    "cover"       : {
+        "b2key"      : str,
+        "gpurl"      : str,
+        "h"          : int,
+        "id"         : int,
+        "is_primary" : bool,
+        "locale"     : "ja",
+        "md_comic_id": int,
+        "mdid"       : "iso:uuid",
+        "s"          : int,
+        "url"        : "iso:uuid",
+        "vol"        : str,
+        "w"          : int,
+    },
+},
+
+{
+    "#url"     : "https://comick.io/comic/01-sakamoto-days/cover",
+    "#class"   : comick.ComickCoversExtractor,
+    "#pattern" : r"https://meo\.comick\.pictures/\w+\.jpg",
+    "#count"   : range(50, 80),
+
+    "id"    : int,
+    "width" : int,
+    "height": int,
+    "volume": range(1, 30),
+    "lang"  : {"ja", "en", "fr", "pt-br"},
 },
 
 )

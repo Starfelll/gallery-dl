@@ -385,7 +385,7 @@ class TestCompileExpression(unittest.TestCase):
         self.assertEqual(expr(value), result)
 
         with tempfile.TemporaryDirectory() as path:
-            file = path + "/module_sha1.py"
+            file = f"{path}/module_sha1.py"
             with open(file, "w") as fp:
                 fp.write("""
 import hashlib
@@ -638,7 +638,7 @@ class TestOther(unittest.TestCase):
         self.assertIs(module, datetime)
 
         with tempfile.TemporaryDirectory() as path:
-            file = path + "/module_test.py"
+            file = f"{path}/module_test.py"
             with open(file, "w") as fp:
                 fp.write("""
 import datetime
@@ -1040,6 +1040,9 @@ value = 123
         self.assertEqual(response.headers.get("foo"), None)
         self.assertEqual(response.links.get("next"), None)
         self.assertEqual(response.close(), None)
+
+        with response as ctx:
+            self.assertIs(response, ctx)
 
 
 class TestExtractor():

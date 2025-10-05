@@ -45,6 +45,15 @@ class MetadataPP(PostProcessor):
                 cfmt = "\n".join(cfmt) + "\n"
             self._content_fmt = formatter.parse(cfmt).format_map
             ext = "txt"
+        elif mode == "print":
+            nl = "\n"
+            if isinstance(cfmt, list):
+                cfmt = f"{nl.join(cfmt)}{nl}"
+            if cfmt[-1] != nl and (cfmt[0] != "\f" or cfmt[1] == "F"):
+                cfmt = f"{cfmt}{nl}"
+            self.write = self._write_custom
+            self._content_fmt = formatter.parse(cfmt).format_map
+            filename = "-"
         elif mode == "jsonl":
             self.write = self._write_json
             self._json_encode = self._make_encoder(options).encode
@@ -101,7 +110,9 @@ class MetadataPP(PostProcessor):
             events = events.split(",")
         job.register_hooks({event: self.run for event in events}, options)
 
-        self._init_archive(job, options, "_MD_")
+        if self._archive_init(job, options, "_MD_"):
+            self._archive_register(job)
+
         self.filter = self._make_filter(options)
         self.mtime = options.get("mtime")
         self.omode = options.get("open", omode)

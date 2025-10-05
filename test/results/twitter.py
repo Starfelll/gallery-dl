@@ -350,6 +350,16 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://x.com/GrimboGrim/status/1839019491835129889",
+    "#comment" : "animated GIF",
+    "#class"   : twitter.TwitterTweetExtractor,
+    "#results" : "https://video.twimg.com/tweet_video/GYWCeZAaMAQ32uh.mp4",
+
+    "extension": "mp4",
+    "type"     : "animated_gif",
+},
+
+{
     "#url"     : "https://x.com/carrotsprout_/status/1577924293023133696",
     "#comment" : "mixed image & video",
     "#class"   : twitter.TwitterTweetExtractor,
@@ -770,6 +780,31 @@ The Washington Post writes, "Three weeks after the toxic train derailment in Ohi
     "#url"     : "https://pbs.twimg.com/media/EqcpviCVoAAG-QG.jpg:orig",
     "#category": ("", "twitter", "image"),
     "#class"   : twitter.TwitterImageExtractor,
+},
+
+{
+    "#url"     : "https://x.com/tetsuoai/highlights",
+    "#class"   : twitter.TwitterHighlightsExtractor,
+},
+
+{
+    "#url"     : "https://x.com/home",
+    "#class"   : twitter.TwitterHomeExtractor,
+},
+
+{
+    "#url"     : "https://x.com/home/for_you",
+    "#class"   : twitter.TwitterHomeExtractor,
+},
+
+{
+    "#url"     : "https://x.com/home/following",
+    "#class"   : twitter.TwitterHomeExtractor,
+},
+
+{
+    "#url"     : "https://x.com/i/timeline",
+    "#class"   : twitter.TwitterHomeExtractor,
 },
 
 )

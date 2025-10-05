@@ -19,6 +19,37 @@ from gallery_dl import extractor, job, config
 LOG = logging.getLogger("gen-test")
 
 
+class LoggingCapture(logging.Handler):
+
+    def __init__(self, args):
+        logging.Handler.__init__(self)
+
+        if args.logging:
+            self.records = []
+            self.output = []
+            self.level = logging.INFO
+        else:
+            self.records = self.output = None
+
+    def __enter__(self):
+        if self.records is None:
+            return
+
+        logger = logging.getLogger(None)
+        logger.handlers.append(self)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def flush(self):
+        pass
+
+    def emit(self, record):
+        self.records.append(record)
+        self.output.append(self.format(record))
+
+
 def module_name(opts):
     category = opts["category"]
     if category[0].isdecimal():
@@ -32,6 +63,9 @@ def generate_test_result(args):
     if args.only_matching:
         opts = meta = None
     else:
+        if args.auth:
+            cfg = util.path("archive", "config.json")
+            config.load((cfg,), strict=True)
         if args.options:
             args.options_parsed = options = {}
             for opt in args.options:
@@ -48,9 +82,10 @@ def generate_test_result(args):
 
         djob = job.DataJob(args.extr, file=None)
         djob.filter = dict.copy
-        djob.run()
+        with LoggingCapture(args) as log_info:
+            djob.run()
 
-        opts = generate_opts(args, djob.data_urls, djob.exception)
+        opts = generate_opts(args, djob.data_urls, djob.exception, log_info)
         ool = (len(opts) > 1 or "#options" in opts)
 
         if args.metadata:
@@ -62,7 +97,7 @@ def generate_test_result(args):
     if opts:
         result = result[:-2] + pyprint(opts, oneline=ool, lmin=9)[1:]
     if meta:
-        result = result[:-1] + pyprint(meta)[1:]
+        result = result[:-1] + pyprint(meta, sort=sort_key)[1:]
     return result + ",\n\n"
 
 
@@ -80,8 +115,11 @@ def generate_head(args):
     return head
 
 
-def generate_opts(args, urls, exc=None):
+def generate_opts(args, urls, exc=None, log=None):
     opts = {}
+
+    if args.auth is not None:
+        opts["#auth"] = args.auth
 
     if args.options:
         opts["#options"] = args.options_parsed
@@ -102,11 +140,42 @@ def generate_opts(args, urls, exc=None):
         opts["#pattern"] = re.escape(urls[0])
         opts["#count"] = len(urls)
 
+    if log is not None:
+        if not log.records:
+            opts["#log"] = ()
+        elif len(log.records) == 1:
+            opts["#log"] = log.output[0]
+        else:
+            opts["#log"] = log.output
+
     return opts
 
 
 def generate_meta(args, data):
-    return {}
+    if not data:
+        return {}
+
+    for kwdict in data:
+        delete = ["category", "subcategory"]
+        for key in kwdict:
+            if not key or key[0] == "_":
+                delete.append(key)
+        for key in delete:
+            del kwdict[key]
+
+    return data[0]
+
+
+def sort_key(key, value):
+    if not value:
+        return 0
+    if isinstance(value, str) and "\n" in value:
+        return 7000
+    if isinstance(value, list) and len(value) > 1:
+        return 8000
+    if isinstance(value, dict):
+        return 9000
+    return 0
 
 
 def insert_test_result(args, result, lines):
@@ -134,9 +203,13 @@ def insert_test_result(args, result, lines):
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(args)
+    parser.add_argument("-a", "--auth", action="store_true", default=None)
+    parser.add_argument("-A", "--no-auth", action="store_false", dest="auth")
     parser.add_argument("-c", "--comment", default=None)
     parser.add_argument("-C", dest="comment", action="store_const", const="")
-    parser.add_argument("-l", "--limit_urls", type=int, default=10)
+    parser.add_argument("-g", "--git", action="store_true")
+    parser.add_argument("-l", "--logging", action="store_true")
+    parser.add_argument("-L", "--limit_urls", type=int, default=10)
     parser.add_argument("-m", "--metadata", action="store_true")
     parser.add_argument("-o", "--option", dest="options", action="append")
     parser.add_argument("-O", "--only-matching", action="store_true")
@@ -161,18 +234,18 @@ def main():
     args.sub = extr.subcategory
     args.base = extr.basecategory
 
-    path = util.path("test", "results", f"{args.cat}.py")
-    with util.open(path) as fp:
-        lines = fp.readlines()
-
     LOG.info("Collecting data for '%s'", args.url)
     result = generate_test_result(args)
 
-    LOG.info("Writing '%s' results to '%s'", args.url, util.trim(path))
-    insert_test_result(args, result, lines)
+    path = util.path("test", "results", f"{args.cat}.py")
+    path_tr = util.trim(path)
+    LOG.info("Writing '%s' results to '%s'", args.url, path_tr)
+    with util.lines(path) as lines:
+        insert_test_result(args, result, lines)
 
-    with util.lazy(path) as fp:
-        fp.writelines(lines)
+    if args.git:
+        LOG.info("git add %s", path_tr)
+        util.git("add", "--", path_tr)
 
 
 if __name__ == "__main__":

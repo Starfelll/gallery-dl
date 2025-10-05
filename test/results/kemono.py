@@ -86,26 +86,27 @@ __tests__ = (
     "#options" : {"max-posts": 100, "endpoint": "posts"},
     "#count"   : range(200, 400),
 
-    "added"      : {str, None},
     "archives"   : [],
     "attachments": list,
-    "captions"   : None,
-    "content"    : str,
     "count"      : int,
     "num"        : int,
-    "date"       : "type:datetime",
-    "edited"     : {str, None},
-    "embed"      : dict,
     "id"         : str,
-    "poll"       : None,
+    "date"       : "type:datetime",
     "published"  : str,
     "service"    : "patreon",
-    "shared_file": False,
     "subcategory": "patreon",
-    "tags"       : {str, None},
     "title"      : str,
     "user"       : "881792",
     "username"   : "diives",
+
+    "!added"      : {str, None},
+    "!captions"   : None,
+    "!content"    : str,
+    "!edited"     : {str, None},
+    "!embed"      : dict,
+    "!poll"       : None,
+    "!shared_file": False,
+    "!tags"       : {str, None},
 },
 
 {
@@ -483,7 +484,7 @@ __tests__ = (
         "public_id": "soso",
         "relation_id": None,
         "service": "fanbox",
-        "updated": "2025-03-29T05:44:56.747243",
+        "updated": "iso:datetime",
     },
     "tags": [
         "うごイラ",
@@ -512,10 +513,55 @@ __tests__ = (
 },
 
 {
+    "#url"     : "https://kemono.cr/patreon/user/108002999/post/136454591",
+    "#comment" : "'.zip' archive with '.bin' extension (#8156)",
+    "#category": ("", "kemono", "patreon"),
+    "#class"   : kemono.KemonoPostExtractor,
+    "#range"   : "0",
+    "#metadata": "post",
+
+    "archives": [{
+        "extension": "zip",
+        "filename": "#5 Kitagawa Marin",
+        "hash": "46cc99d4114906524fe52a6f772c51ab59ca1c3c0f6a8a0d3588a861b0d59ced",
+        "name": "#5 Kitagawa Marin.zip",
+        "path": "/46/cc/46cc99d4114906524fe52a6f772c51ab59ca1c3c0f6a8a0d3588a861b0d59ced.bin",
+        "type": "archive",
+        "url": "https://kemono.cr/data/46/cc/46cc99d4114906524fe52a6f772c51ab59ca1c3c0f6a8a0d3588a861b0d59ced.bin"
+    }],
+},
+
+{
     "#url"     : "https://kemono.cr/discord/server/488668827274444803/608504710906904576",
     "#category": ("", "kemono", "discord"),
     "#class"   : kemono.KemonoDiscordExtractor,
-    "#count"   : 4,
+    "#results" : (
+        "https://kemono.cr/data/6e/6a/6e6a4a048e6f3c047edac851d1f66eca4a4f0a823faa1d9395892378fcb700b1.png",
+        "https://kemono.cr/data/55/e1/55e1ddf540ded5e6651de65c059529d1f51451cde523ec103dc696f1cc3595a4.png",
+        "https://kemono.cr/data/9d/98/9d983fd163d5f5335c896c93b9f363198d6ca14a7e5bf0fa823aa86268732f85.png",
+        "https://kemono.cr/data/fb/54/fb54ff75f1c879b25bf031a55a1730002049337693443f1b57c08b07e35c452f.png",
+    ),
+
+    "channel"      : "finish-work",
+    "channel_id"   : "608504710906904576",
+    "channel_nsfw" : False,
+    "channel_topic": None,
+    "channel_type" : 0,
+    "server"       : "ABFMMD NSFW Server",
+    "server_id"    : "488668827274444803",
+},
+
+{
+    "#url"     : "https://kemono.cr/discord/server/488668827274444803/608504710906904576",
+    "#category": ("", "kemono", "discord"),
+    "#class"   : kemono.KemonoDiscordExtractor,
+    "#options" : {"order-posts": "reverse"},
+    "#results" : (
+        "https://kemono.cr/data/fb/54/fb54ff75f1c879b25bf031a55a1730002049337693443f1b57c08b07e35c452f.png",
+        "https://kemono.cr/data/9d/98/9d983fd163d5f5335c896c93b9f363198d6ca14a7e5bf0fa823aa86268732f85.png",
+        "https://kemono.cr/data/55/e1/55e1ddf540ded5e6651de65c059529d1f51451cde523ec103dc696f1cc3595a4.png",
+        "https://kemono.cr/data/6e/6a/6e6a4a048e6f3c047edac851d1f66eca4a4f0a823faa1d9395892378fcb700b1.png",
+    ),
 
     "channel"      : "finish-work",
     "channel_id"   : "608504710906904576",
